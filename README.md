@@ -18,10 +18,12 @@ Or install it yourself as:
 
 ## Usage
 
+```
 require 'thread_safe'
 
 sa = ThreadSafe::Array.new # supports standard Array.new forms
 sh = ThreadSafe::Hash.new # supports standard Hash.new forms
+```
 
 ## Contributing
 
