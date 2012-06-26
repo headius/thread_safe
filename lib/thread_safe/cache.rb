@@ -5,6 +5,11 @@ module ThreadSafe
   begin
     ConcurrentCacheBackend # trigger autoload
   rescue NameError
+    begin
+      # there seems to be a bug in JRuby, whereas autoload doesn't pick up on .jars
+      require 'thread_safe/concurrent_cache_backend'
+    rescue LoadError
+    end
   end
 
   unless defined?(ConcurrentCacheBackend) && ConcurrentCacheBackend
