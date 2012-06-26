@@ -16,6 +16,7 @@ module ThreadSafe
     if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'ruby'
       ConcurrentCacheBackend = NonConcurrentCacheBackend
     else
+      warn 'ThreadSafe: unsupported Ruby engine, using a fully synchronized ThreadSafe::Cache implementation' if $VERBOSE
       ConcurrentCacheBackend = SynchronizedCacheBackend
     end
   end
