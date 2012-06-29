@@ -73,6 +73,11 @@ module ThreadSafe
       each_pair {|k, v| yield v}
     end
 
+    def empty?
+      each_pair {|k, v| return false}
+      true
+    end
+
     private
     def validate_options_hash!(options)
       if (initial_capacity = options[:initial_capacity]) && (!initial_capacity.kind_of?(Fixnum) || initial_capacity < 0)

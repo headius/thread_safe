@@ -190,6 +190,12 @@ class TestCache < Test::Unit::TestCase
     assert_equal [1, 2], arr.sort
   end
 
+  def test_empty
+    assert_equal true,  @cache.empty?
+    @cache[:a] = 1
+    assert_equal false, @cache.empty?
+  end
+
   def test_options_validation
     assert_valid_options(nil)
     assert_valid_options({})
