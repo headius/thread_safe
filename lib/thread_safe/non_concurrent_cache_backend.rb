@@ -22,5 +22,10 @@ module ThreadSafe
       end
       true
     end
+
+    def clear
+      @backend.clear
+      self
+    end
   end
 end

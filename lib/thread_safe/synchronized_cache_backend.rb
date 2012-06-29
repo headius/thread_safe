@@ -18,5 +18,9 @@ module ThreadSafe
     def delete(key)
       synchronize { super }
     end
+
+    def clear
+      synchronize { super }
+    end
   end
 end

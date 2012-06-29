@@ -79,7 +79,14 @@ class TestCache < Test::Unit::TestCase
     assert_equal true, @cache.key?(:a)
     assert_equal(nil, (@cache.fetch(:a) {flunk}))
   end
-  
+
+  def test_clear
+    @cache[:a] = 1
+    assert_equal @cache, @cache.clear
+    assert_equal false,  @cache.key?(:a)
+    assert_equal nil,    @cache[:a]
+  end
+
   def test_options_validation
     assert_valid_options(nil)
     assert_valid_options({})
