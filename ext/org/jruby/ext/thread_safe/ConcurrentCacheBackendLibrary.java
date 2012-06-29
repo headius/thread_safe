@@ -1,11 +1,13 @@
 package org.jruby.ext.thread_safe;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.jruby.*;
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
+import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -94,6 +96,14 @@ public class ConcurrentCacheBackendLibrary implements Library {
         @JRubyMethod
         public IRubyObject clear() {
             map.clear();
+            return this;
+        }
+
+        @JRubyMethod
+         public IRubyObject each_pair(ThreadContext context, Block block) {
+            for (Map.Entry<IRubyObject,IRubyObject> entry : map.entrySet()) {
+                block.yieldSpecific(context, entry.getKey(), entry.getValue());
+            }
             return this;
         }
     }

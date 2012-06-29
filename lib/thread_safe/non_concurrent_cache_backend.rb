@@ -27,5 +27,12 @@ module ThreadSafe
       @backend.clear
       self
     end
+
+    def each_pair
+      @backend.each_pair do |k, v|
+        yield k, v
+      end
+      self
+    end
   end
 end

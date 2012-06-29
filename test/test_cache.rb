@@ -87,6 +87,21 @@ class TestCache < Test::Unit::TestCase
     assert_equal nil,    @cache[:a]
   end
 
+  def test_each_pair
+    @cache.each_pair {|k, v| flunk}
+    assert_equal(@cache, (@cache.each_pair {}))
+    @cache[:a] = 1
+
+    h = {}
+    @cache.each_pair {|k, v| h[k] = v}
+    assert_equal({:a => 1}, h)
+
+    @cache[:b] = 2
+    h = {}
+    @cache.each_pair {|k, v| h[k] = v}
+    assert_equal({:a => 1, :b => 2}, h)
+  end
+
   def test_options_validation
     assert_valid_options(nil)
     assert_valid_options({})

@@ -6,7 +6,9 @@ require "thread_safe"
 hash  = {}
 cache = ThreadSafe::Cache.new
 
-10_000.times do |i|
+ENTRIES = 10_000
+
+ENTRIES.times do |i|
   hash[i]  = i
   cache[i] = i
 end
@@ -21,5 +23,13 @@ Benchmark.bmbm do |results|
 
   results.report('Cache#[]') do
     TESTS.times { cache[key] }
+  end
+
+  results.report('Hash#each_pair') do
+    (TESTS / ENTRIES).times { hash.each_pair {|k,v| v} }
+  end
+
+  results.report('Cache#each_pair') do
+    (TESTS / ENTRIES).times { cache.each_pair {|k,v| v} }
   end
 end
