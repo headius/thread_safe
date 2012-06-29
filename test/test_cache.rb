@@ -111,6 +111,23 @@ class TestCache < Test::Unit::TestCase
     assert_equal({:a => 1, :b => 2}, h)
   end
 
+  def test_each_pair_iterator
+    @cache[:a] = 1
+    @cache[:b] = 2
+    i = 0
+    r = @cache.each_pair do |k, v|
+      if i == 0
+        i += 1
+        next
+        flunk
+      elsif i == 1
+        break :breaked
+      end
+    end
+
+    assert_equal :breaked, r
+  end
+
   def test_options_validation
     assert_valid_options(nil)
     assert_valid_options({})
