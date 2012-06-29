@@ -80,6 +80,15 @@ class TestCache < Test::Unit::TestCase
     assert_equal(nil, (@cache.fetch(:a) {flunk}))
   end
 
+  def test_fetch_with_return
+    r = lambda do
+      @cache.fetch(:a) { return 10 }
+    end.call
+
+    assert_equal 10,    r
+    assert_equal false, @cache.key?(:a)
+  end
+
   def test_clear
     @cache[:a] = 1
     assert_equal @cache, @cache.clear
