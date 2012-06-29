@@ -9,6 +9,7 @@ _yardoc
 coverage
 doc/
 lib/bundler/man
+lib/thread_safe/concurrent_cache_backend.jar
 pkg
 rdoc
 spec/reports
