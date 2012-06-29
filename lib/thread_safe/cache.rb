@@ -53,6 +53,26 @@ module ThreadSafe
       end
     end
 
+    def keys
+      arr = []
+      each_pair {|k, v| arr << k}
+      arr
+    end
+
+    def values
+      arr = []
+      each_pair {|k, v| arr << v}
+      arr
+    end
+
+    def each_key
+      each_pair {|k, v| yield k}
+    end
+
+    def each_value
+      each_pair {|k, v| yield v}
+    end
+
     private
     def validate_options_hash!(options)
       if (initial_capacity = options[:initial_capacity]) && (!initial_capacity.kind_of?(Fixnum) || initial_capacity < 0)

@@ -142,6 +142,54 @@ class TestCache < Test::Unit::TestCase
     assert_equal :breaked, r
   end
 
+  def test_keys
+    assert_equal [], @cache.keys
+
+    @cache[1] = 1
+    assert_equal [1], @cache.keys
+
+    @cache[2] = 2
+    assert_equal [1, 2], @cache.keys.sort
+  end
+
+  def test_values
+    assert_equal [], @cache.values
+
+    @cache[1] = 1
+    assert_equal [1], @cache.values
+
+    @cache[2] = 2
+    assert_equal [1, 2], @cache.values.sort
+  end
+
+  def test_each_key
+    assert_equal(@cache, (@cache.each_key {flunk}))
+
+    @cache[1] = 1
+    arr = []
+    @cache.each_key {|k| arr << k}
+    assert_equal [1], arr
+
+    @cache[2] = 2
+    arr = []
+    @cache.each_key {|k| arr << k}
+    assert_equal [1, 2], arr.sort
+  end
+
+  def test_each_value
+    assert_equal(@cache, (@cache.each_value {flunk}))
+
+    @cache[1] = 1
+    arr = []
+    @cache.each_value {|k| arr << k}
+    assert_equal [1], arr
+
+    @cache[2] = 2
+    arr = []
+    @cache.each_value {|k| arr << k}
+    assert_equal [1, 2], arr.sort
+  end
+
   def test_options_validation
     assert_valid_options(nil)
     assert_valid_options({})
