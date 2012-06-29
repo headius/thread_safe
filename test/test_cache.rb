@@ -44,11 +44,12 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_delete
-    assert_equal false, @cache.delete(:a)
+    assert_equal nil,   @cache.delete(:a)
     @cache[:a] = 1
-    assert_equal true,  @cache.delete(:a)
+    assert_equal 1,     @cache.delete(:a)
     assert_equal nil,   @cache[:a]
     assert_equal false, @cache.key?(:a)
+    assert_equal nil,   @cache.delete(:a)
   end
 
   def test_default_proc
@@ -94,13 +95,6 @@ class TestCache < Test::Unit::TestCase
 
     assert_equal 10,    r
     assert_equal false, @cache.key?(:a)
-  end
-
-  def test_delete_and_get
-    assert_equal nil, @cache.delete_and_get(:a)
-    @cache[:a] = 1
-    assert_equal 1,   @cache.delete_and_get(:a)
-    assert_equal nil, @cache.delete_and_get(:a)
   end
 
   def test_clear

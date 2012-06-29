@@ -26,13 +26,6 @@ module ThreadSafe
     end
 
     def delete(key)
-      @backend.delete(key) do
-        return false
-      end
-      true
-    end
-
-    def delete_and_get(key)
       @backend.delete(key)
     end
 
