@@ -11,6 +11,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def put_if_absent(key, value)
+      synchronize { super }
+    end
+
     def key?(key)
       synchronize { super }
     end

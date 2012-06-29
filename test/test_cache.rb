@@ -30,6 +30,13 @@ class TestCache < Test::Unit::TestCase
     assert_equal 1,   @cache[:a]
   end
 
+  def test_put_if_absent
+    assert_equal nil, @cache.put_if_absent(:a, 1)
+    assert_equal 1,   @cache.put_if_absent(:a, 1)
+    assert_equal 1,   @cache.put_if_absent(:a, 2)
+    assert_equal 1,   @cache[:a]
+  end
+
   def test_key
     assert_equal false, @cache.key?(:a)
     @cache[:a] = 1

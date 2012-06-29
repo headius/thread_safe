@@ -83,6 +83,12 @@ public class ConcurrentCacheBackendLibrary implements Library {
             return value;
         }
 
+        @JRubyMethod
+        public IRubyObject put_if_absent(IRubyObject key, IRubyObject value) {
+            IRubyObject result = map.putIfAbsent(key, value);
+            return result == null ? getRuntime().getNil() : result;
+        }
+
         @JRubyMethod(name = {"key?"}, required = 1)
         public RubyBoolean has_key_p(IRubyObject key) {
             return map.containsKey(key) ? getRuntime().getTrue() : getRuntime().getFalse();

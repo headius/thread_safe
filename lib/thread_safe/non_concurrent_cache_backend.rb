@@ -12,6 +12,15 @@ module ThreadSafe
       @backend[key] = value
     end
 
+    def put_if_absent(key, value)
+      unless @backend.key?(key)
+        result = @backend[key] ||= value
+        result unless value.equal?(result)
+      else
+        @backend[key]
+      end
+    end
+
     def key?(key)
       @backend.key?(key)
     end
