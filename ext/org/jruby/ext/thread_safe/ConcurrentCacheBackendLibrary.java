@@ -78,7 +78,7 @@ public class ConcurrentCacheBackendLibrary implements Library {
         }
 
         @JRubyMethod(name = {"[]="}, required = 2)
-        public IRubyObject op_aset(ThreadContext context, IRubyObject key, IRubyObject value) {
+        public IRubyObject op_aset(IRubyObject key, IRubyObject value) {
             map.put(key, value);
             return value;
         }
