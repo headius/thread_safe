@@ -23,6 +23,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def delete_and_get(key)
+      synchronize { super }
+    end
+
     def clear
       synchronize { super }
     end

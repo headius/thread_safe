@@ -32,6 +32,10 @@ module ThreadSafe
       true
     end
 
+    def delete_and_get(key)
+      @backend.delete(key)
+    end
+
     def clear
       @backend.clear
       self

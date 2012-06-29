@@ -96,6 +96,13 @@ class TestCache < Test::Unit::TestCase
     assert_equal false, @cache.key?(:a)
   end
 
+  def test_delete_and_get
+    assert_equal nil, @cache.delete_and_get(:a)
+    @cache[:a] = 1
+    assert_equal 1,   @cache.delete_and_get(:a)
+    assert_equal nil, @cache.delete_and_get(:a)
+  end
+
   def test_clear
     @cache[:a] = 1
     assert_equal @cache, @cache.clear
