@@ -1,5 +1,7 @@
 module ThreadSafe
   class NonConcurrentCacheBackend
+    # WARNING: all methods of the class must operate on the @backend directly without calling each other. This is important
+    # because of the SynchronizedCacheBackend which uses a non-reentrant mutex for perfomance reasons.
     def initialize(options = nil)
       @backend = {}
     end

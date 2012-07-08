@@ -2,6 +2,7 @@ module ThreadSafe
   class SynchronizedCacheBackend < NonConcurrentCacheBackend
     require 'mutex_m'
     include Mutex_m
+    # WARNING: Mutex_m is a non-reentrant lock, so the synchronized methods are not allowed to call each other.
 
     def [](key)
       synchronize { super }
