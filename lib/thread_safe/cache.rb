@@ -1,5 +1,8 @@
+require 'thread'
+
 module ThreadSafe
   autoload :ConcurrentCacheBackend,    'thread_safe/concurrent_cache_backend'
+  autoload :MriCacheBackend,           'thread_safe/mri_cache_backend'
   autoload :NonConcurrentCacheBackend, 'thread_safe/non_concurrent_cache_backend'
   autoload :SynchronizedCacheBackend,  'thread_safe/synchronized_cache_backend'
 
@@ -10,7 +13,7 @@ module ThreadSafe
 
   unless concurrent_cache_backend
     if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'ruby'
-      ConcurrentCacheBackend = NonConcurrentCacheBackend
+      ConcurrentCacheBackend = MriCacheBackend
     else
       warn 'ThreadSafe: unsupported Ruby engine, using a fully synchronized ThreadSafe::Cache implementation' if $VERBOSE
       ConcurrentCacheBackend = SynchronizedCacheBackend

@@ -13,11 +13,11 @@ module ThreadSafe
     end
 
     def put_if_absent(key, value)
-      unless @backend.key?(key)
-        result = @backend[key] ||= value
-        result unless value.equal?(result)
-      else
+      if @backend.key?(key)
         @backend[key]
+      else
+        @backend[key] = value
+        nil
       end
     end
 
