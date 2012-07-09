@@ -31,6 +31,15 @@ module ThreadSafe
       @backend.delete(key)
     end
 
+    def delete_pair(key, value)
+      if ((stored_value = @backend[key]) || @backend.key?(key)) && value.equal?(stored_value)
+        @backend.delete(key)
+        true
+      else
+        false
+      end
+    end
+
     def clear
       @backend.clear
       self

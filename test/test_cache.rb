@@ -60,6 +60,16 @@ class TestCache < Test::Unit::TestCase
     assert_equal nil,   @cache.delete(:a)
   end
 
+  def test_delete_pair
+    assert_equal false, @cache.delete_pair(:a, 2)
+    @cache[:a] = 1
+    assert_equal false, @cache.delete_pair(:a, 2)
+    assert_equal 1,     @cache[:a]
+    assert_equal true,  @cache.delete_pair(:a, 1)
+    assert_equal false, @cache.delete_pair(:a, 1)
+    assert_equal false, @cache.key?(:a)
+  end
+
   def test_default_proc
     cache = ThreadSafe::Cache.new {|h,k| h[k] = 1}
     assert_equal false, cache.key?(:a)

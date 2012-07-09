@@ -9,6 +9,10 @@ module ThreadSafe
         end
       end
 
+      def delete_pair(key, value)
+        disallow_thread_switch { super }
+      end
+
       private
       def disallow_thread_switch
         prev_critical = Thread.critical
@@ -38,6 +42,10 @@ module ThreadSafe
       end
 
       def delete(key)
+        WRITE_LOCK.synchronize { super }
+      end
+
+      def delete_pair(key, value)
         WRITE_LOCK.synchronize { super }
       end
 

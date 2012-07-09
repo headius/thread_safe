@@ -101,6 +101,11 @@ public class ConcurrentCacheBackendLibrary implements Library {
         }
 
         @JRubyMethod
+        public RubyBoolean delete_pair(IRubyObject key, IRubyObject value) {
+            return getRuntime().newBoolean(map.remove(key, value));
+        }
+
+        @JRubyMethod
         public IRubyObject clear() {
             map.clear();
             return this;

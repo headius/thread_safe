@@ -24,6 +24,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def delete_pair(key, value)
+      synchronize { super }
+    end
+
     def clear
       synchronize { super }
     end
