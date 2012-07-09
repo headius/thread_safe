@@ -16,6 +16,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def replace_if_exists(key, new_value)
+      synchronize { super }
+    end
+
     def key?(key)
       synchronize { super }
     end

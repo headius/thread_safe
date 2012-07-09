@@ -45,6 +45,24 @@ class TestCache < Test::Unit::TestCase
     assert_equal 1,   @cache[:a]
   end
 
+  def test_replace_if_exists
+    assert_equal nil,   @cache.replace_if_exists(:a, 1)
+    assert_equal false, @cache.key?(:a)
+    @cache[:a] = 1
+    assert_equal 1,     @cache.replace_if_exists(:a, 2)
+    assert_equal 2,     @cache[:a]
+    assert_equal 2,     @cache.replace_if_exists(:a, nil)
+    assert_equal nil,   @cache[:a]
+    assert_equal nil,   @cache.replace_if_exists(:a, 1)
+    assert_equal 1,     @cache[:a]
+  end
+
+  def test_replace_if_exists_with_default_proc
+    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
+    assert_equal nil,   @cache.replace_if_exists(:a, 1)
+    assert_equal false, @cache.key?(:a)
+  end
+
   def test_key
     assert_equal false, @cache.key?(:a)
     @cache[:a] = 1

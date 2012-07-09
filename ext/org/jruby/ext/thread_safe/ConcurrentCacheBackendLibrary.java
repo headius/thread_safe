@@ -95,6 +95,12 @@ public class ConcurrentCacheBackendLibrary implements Library {
         }
 
         @JRubyMethod
+        public IRubyObject replace_if_exists(IRubyObject key, IRubyObject value) {
+            IRubyObject result = map.replace(key, value);
+            return result == null ? getRuntime().getNil() : result;
+        }
+
+        @JRubyMethod
         public IRubyObject delete(IRubyObject key) {
             IRubyObject result = map.remove(key);
             return result == null ? getRuntime().getNil() : result;

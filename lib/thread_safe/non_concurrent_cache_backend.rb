@@ -23,6 +23,13 @@ module ThreadSafe
       end
     end
 
+    def replace_if_exists(key, new_value)
+      if (stored_value = @backend[key]) || @backend.key?(key)
+        @backend[key] = new_value
+        stored_value
+      end
+    end
+
     def key?(key)
       @backend.key?(key)
     end
