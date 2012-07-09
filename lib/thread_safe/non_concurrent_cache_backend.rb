@@ -42,5 +42,9 @@ module ThreadSafe
       end
       self
     end
+
+    alias_method :_get, :[]
+    alias_method :_set, :[]=
+    private :_get, :_set
   end
 end

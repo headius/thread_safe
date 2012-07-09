@@ -2,7 +2,11 @@ module ThreadSafe
   class MriCacheBackend < NonConcurrentCacheBackend
     if Thread.respond_to?(:critical)
       def put_if_absent(key, value)
-        disallow_thread_switch { super }
+        if stored_value = _get(key)
+          stored_value
+        else
+          disallow_thread_switch { super }
+        end
       end
 
       private
@@ -26,7 +30,11 @@ module ThreadSafe
       end
 
       def put_if_absent(key, value)
-        WRITE_LOCK.synchronize { super }
+        if stored_value = _get(key)
+          stored_value
+        else
+          WRITE_LOCK.synchronize { super }
+        end
       end
 
       def delete(key)
