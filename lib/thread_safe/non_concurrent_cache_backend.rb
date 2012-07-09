@@ -1,6 +1,6 @@
 module ThreadSafe
   class NonConcurrentCacheBackend
-    # WARNING: all methods of the class must operate on the @backend directly without calling each other. This is important
+    # WARNING: all public methods of the class must operate on the @backend directly without calling each other. This is important
     # because of the SynchronizedCacheBackend which uses a non-reentrant mutex for perfomance reasons.
     def initialize(options = nil)
       @backend = {}
@@ -37,7 +37,7 @@ module ThreadSafe
     end
 
     def each_pair
-      @backend.each_pair do |k, v|
+      dupped_backend.each_pair do |k, v|
         yield k, v
       end
       self
@@ -46,5 +46,9 @@ module ThreadSafe
     alias_method :_get, :[]
     alias_method :_set, :[]=
     private :_get, :_set
+    private
+    def dupped_backend
+      @backend.dup
+    end
   end
 end

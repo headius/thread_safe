@@ -144,6 +144,18 @@ class TestCache < Test::Unit::TestCase
     assert_equal :breaked, r
   end
 
+  def test_each_pair_allows_modification
+    @cache[:a] = 1
+    @cache[:b] = 1
+    @cache[:c] = 1
+
+    assert_nothing_raised do
+      @cache.each_pair do |k, v|
+        @cache[:z] = 1
+      end
+    end
+  end
+
   def test_keys
     assert_equal [], @cache.keys
 

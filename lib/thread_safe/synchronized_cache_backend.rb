@@ -28,23 +28,9 @@ module ThreadSafe
       synchronize { super }
     end
 
-    def each_pair
-      collection = []
-      synchronize do
-        super do |k, v|
-          collection << k << v
-        end
-      end
-
-      i = 0
-      total = collection.length
-
-      while i < total
-        yield collection[i], collection[i + 1]
-        i += 2
-      end
-
-      self
+    private
+    def dupped_backend
+      synchronize { super }
     end
   end
 end
