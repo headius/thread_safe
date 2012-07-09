@@ -9,6 +9,10 @@ module ThreadSafe
         end
       end
 
+      def replace_pair(key, old_value, new_value)
+        disallow_thread_switch { super }
+      end
+
       def replace_if_exists(key, new_value)
         disallow_thread_switch { super }
       end
@@ -43,6 +47,10 @@ module ThreadSafe
         else
           WRITE_LOCK.synchronize { super }
         end
+      end
+
+      def replace_pair(key, old_value, new_value)
+        WRITE_LOCK.synchronize { super }
       end
 
       def replace_if_exists(key, new_value)

@@ -23,6 +23,15 @@ module ThreadSafe
       end
     end
 
+    def replace_pair(key, old_value, new_value)
+      if pair?(key, old_value)
+        @backend[key] = new_value
+        true
+      else
+        false
+      end
+    end
+
     def replace_if_exists(key, new_value)
       if (stored_value = @backend[key]) || @backend.key?(key)
         @backend[key] = new_value
@@ -39,7 +48,7 @@ module ThreadSafe
     end
 
     def delete_pair(key, value)
-      if ((stored_value = @backend[key]) || @backend.key?(key)) && value.equal?(stored_value)
+      if pair?(key, value)
         @backend.delete(key)
         true
       else
@@ -65,6 +74,10 @@ module ThreadSafe
     private
     def dupped_backend
       @backend.dup
+    end
+
+    def pair?(key, expected_value)
+      ((stored_value = @backend[key]) || @backend.key?(key)) && expected_value.equal?(stored_value)
     end
   end
 end

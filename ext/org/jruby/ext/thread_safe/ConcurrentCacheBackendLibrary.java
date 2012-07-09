@@ -89,6 +89,11 @@ public class ConcurrentCacheBackendLibrary implements Library {
             return result == null ? getRuntime().getNil() : result;
         }
 
+        @JRubyMethod
+        public RubyBoolean replace_pair(IRubyObject key, IRubyObject oldValue, IRubyObject newValue) {
+            return getRuntime().newBoolean(map.replace(key, oldValue, newValue));
+        }
+
         @JRubyMethod(name = {"key?"}, required = 1)
         public RubyBoolean has_key_p(IRubyObject key) {
             return map.containsKey(key) ? getRuntime().getTrue() : getRuntime().getFalse();

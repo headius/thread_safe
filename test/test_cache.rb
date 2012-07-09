@@ -45,6 +45,24 @@ class TestCache < Test::Unit::TestCase
     assert_equal 1,   @cache[:a]
   end
 
+  def test_replace_pair
+    assert_equal false, @cache.replace_pair(:a, 1, 2)
+    @cache[:a] = 1
+    assert_equal true,  @cache.replace_pair(:a, 1, 2)
+    assert_equal false, @cache.replace_pair(:a, 1, 2)
+    assert_equal 2,     @cache[:a]
+    assert_equal true,  @cache.replace_pair(:a, 2, 2)
+    assert_equal 2,     @cache[:a]
+    assert_equal true,  @cache.replace_pair(:a, 2, nil)
+    assert_equal false, @cache.replace_pair(:a, 2, nil)
+    assert_equal nil,   @cache[:a]
+    assert_equal true,  @cache.key?(:a)
+    assert_equal true,  @cache.replace_pair(:a, nil, nil)
+    assert_equal true,  @cache.key?(:a)
+    assert_equal true,  @cache.replace_pair(:a, nil, 1)
+    assert_equal 1,     @cache[:a]
+  end
+
   def test_replace_if_exists
     assert_equal nil,   @cache.replace_if_exists(:a, 1)
     assert_equal false, @cache.key?(:a)
