@@ -22,24 +22,19 @@ module ThreadSafe
       WRITE_LOCK = Mutex.new
 
       def []=(key, value)
-        write_synchronize { super }
+        WRITE_LOCK.synchronize { super }
       end
 
       def put_if_absent(key, value)
-        write_synchronize { super }
+        WRITE_LOCK.synchronize { super }
       end
 
       def delete(key)
-        write_synchronize { super }
+        WRITE_LOCK.synchronize { super }
       end
 
       def clear
-        write_synchronize { super }
-      end
-
-      private
-      def write_synchronize
-        WRITE_LOCK.synchronize { yield }
+        WRITE_LOCK.synchronize { super }
       end
     end
   end
