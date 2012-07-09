@@ -37,6 +37,14 @@ class TestCache < Test::Unit::TestCase
     assert_equal 1,   @cache[:a]
   end
 
+  def test_put_if_absent_with_default_proc
+    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
+    assert_equal nil, @cache.put_if_absent(:a, 1)
+    assert_equal 1,   @cache.put_if_absent(:a, 1)
+    assert_equal 1,   @cache.put_if_absent(:a, 2)
+    assert_equal 1,   @cache[:a]
+  end
+
   def test_key
     assert_equal false, @cache.key?(:a)
     @cache[:a] = 1
