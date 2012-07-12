@@ -23,6 +23,14 @@ module ThreadSafe
       end
     end
 
+    def compute_if_absent(key)
+      if (stored_value = @backend[key]) || @backend.key?(key)
+        stored_value
+      else
+        @backend[key] = yield
+      end
+    end
+
     def replace_pair(key, old_value, new_value)
       if pair?(key, old_value)
         @backend[key] = new_value

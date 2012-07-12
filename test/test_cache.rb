@@ -1,5 +1,7 @@
 require 'test/unit'
 require 'thread_safe'
+require 'thread'
+require File.join(File.dirname(__FILE__), "test_helper")
 
 Thread.abort_on_exception = true
 
@@ -43,6 +45,78 @@ class TestCache < Test::Unit::TestCase
     assert_equal 1,   @cache.put_if_absent(:a, 1)
     assert_equal 1,   @cache.put_if_absent(:a, 2)
     assert_equal 1,   @cache[:a]
+  end
+
+  def test_compute_if_absent
+    assert_equal(1,   (@cache.compute_if_absent(:a) {1}))
+    assert_equal(1,   (@cache.compute_if_absent(:a) {2}))
+    assert_equal 1,    @cache[:a]
+    @cache[:b] = nil
+    assert_equal(nil, (@cache.compute_if_absent(:b) {1}))
+  end
+
+  def test_compute_if_absent_with_default_proc
+    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 1}
+    assert_equal(2,   (@cache.compute_if_absent(:a) {2}))
+    assert_equal 2,    @cache[:a]
+    assert_equal(nil, (@cache.compute_if_absent(:b) {}))
+    assert_equal nil,  @cache[:b]
+    assert_equal true, @cache.key?(:b)
+  end
+
+  def test_compute_if_absent_exception
+    exception_klass = Class.new(Exception)
+    assert_raise(exception_klass) do
+      @cache.compute_if_absent(:a) { raise exception_klass, '' }
+    end
+    assert_equal false, @cache.key?(:a)
+  end
+
+  def test_compute_if_absent_atomicity
+    late_compute_threads_count       = 10
+    late_put_if_absent_threads_count = 10
+    getter_threads_count             = 5
+    compute_started = ThreadSafe::Latch.new(1)
+    compute_proceed = ThreadSafe::Latch.new(late_compute_threads_count + late_put_if_absent_threads_count + getter_threads_count)
+    block_until_compute_started = lambda do |name|
+      if (v = @cache[:a]) != nil
+        assert_equal nil, v
+      end
+      compute_proceed.release
+      compute_started.await
+    end
+
+    late_compute_threads = Array.new(late_compute_threads_count) do
+      Thread.new do
+        block_until_compute_started.call('compute_if_absent')
+        assert_equal(1, (@cache.compute_if_absent(:a) { flunk }))
+      end
+    end
+
+    late_put_if_absent_threads = Array.new(late_put_if_absent_threads_count) do
+      Thread.new do
+        block_until_compute_started.call('put_if_absent')
+        assert_equal(1, @cache.put_if_absent(:a, 2))
+      end
+    end
+
+    getter_threads = Array.new(getter_threads_count) do
+      Thread.new do
+        block_until_compute_started.call('getter')
+        Thread.pass while @cache[:a].nil?
+        assert_equal 1, @cache[:a]
+      end
+    end
+
+    Thread.new do
+      @cache.compute_if_absent(:a) do
+        compute_started.release
+        compute_proceed.await
+        sleep(0.2)
+        1
+      end
+    end.join
+    (late_compute_threads + late_put_if_absent_threads + getter_threads).each(&:join)
   end
 
   def test_replace_pair
