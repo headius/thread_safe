@@ -76,8 +76,8 @@ class TestCache < Test::Unit::TestCase
     late_compute_threads_count       = 10
     late_put_if_absent_threads_count = 10
     getter_threads_count             = 5
-    compute_started = ThreadSafe::Latch.new(1)
-    compute_proceed = ThreadSafe::Latch.new(late_compute_threads_count + late_put_if_absent_threads_count + getter_threads_count)
+    compute_started = ThreadSafe::Test::Latch.new(1)
+    compute_proceed = ThreadSafe::Test::Latch.new(late_compute_threads_count + late_put_if_absent_threads_count + getter_threads_count)
     block_until_compute_started = lambda do |name|
       if (v = @cache[:a]) != nil
         assert_equal nil, v
