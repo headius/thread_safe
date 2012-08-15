@@ -377,6 +377,20 @@ class TestCache < Test::Unit::TestCase
     assert_equal 0, @cache.size
   end
 
+  def test_dup_clone
+    [:dup, :clone].each do |meth|
+      cache = ThreadSafe::Cache.new
+      cache[:a] = 1
+      dupped = cache.send(meth)
+      assert_equal 1, dupped[:a]
+      cache[:b] = 1
+      assert_equal false, dupped.key?(:b)
+      dupped.delete(:a)
+      assert_equal false, dupped.key?(:a)
+      assert_equal true,  cache.key?(:a)
+    end
+  end
+
   private
   def assert_valid_option(option_name, value)
     assert_valid_options(option_name => value)

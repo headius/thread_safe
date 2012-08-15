@@ -84,6 +84,12 @@ module ThreadSafe
     end
 
     private
+    def initialize_copy(other)
+      super
+      other.each_pair {|k, v| self[k] = v}
+      self
+    end
+
     def validate_options_hash!(options)
       if (initial_capacity = options[:initial_capacity]) && (!initial_capacity.kind_of?(Fixnum) || initial_capacity < 0)
         raise ArgumentError, ":initial_capacity must be a positive Fixnum"

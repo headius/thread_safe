@@ -80,6 +80,12 @@ module ThreadSafe
     alias_method :_set, :[]=
     private :_get, :_set
     private
+    def initialize_copy(other)
+      super
+      @backend = {}
+      self
+    end
+
     def dupped_backend
       @backend.dup
     end

@@ -12,6 +12,10 @@ import org.jruby.runtime.load.Library;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.jruby.CompatVersion.RUBY1_8;
+import static org.jruby.CompatVersion.RUBY1_9;
+import static org.jruby.runtime.Visibility.PRIVATE;
+
 /**
  * Native Java implementation to avoid the JI overhead.
  * 
@@ -136,6 +140,12 @@ public class ConcurrentCacheBackendLibrary implements Library {
             for (Map.Entry<IRubyObject,IRubyObject> entry : map.entrySet()) {
                 block.yieldSpecific(context, entry.getKey(), entry.getValue());
             }
+            return this;
+        }
+
+        @JRubyMethod(visibility = PRIVATE)
+        public ConcurrentCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
+            this.map = new ComputableConcurrentHashMap<IRubyObject, IRubyObject>();
             return this;
         }
     }
