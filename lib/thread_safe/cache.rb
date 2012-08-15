@@ -78,12 +78,28 @@ module ThreadSafe
       count
     end
 
+    def marshal_dump
+      raise TypeError, "can't dump hash with default proc" if @default_proc
+      h = {}
+      each_pair {|k, v| h[k] = v}
+      h
+    end
+
+    def marshal_load(hash)
+      initialize
+      populate_from(hash)
+    end
+
     undef :freeze
 
     private
     def initialize_copy(other)
       super
-      other.each_pair {|k, v| self[k] = v}
+      populate_from(other)
+    end
+
+    def populate_from(hash)
+      hash.each_pair {|k, v| self[k] = v}
       self
     end
 

@@ -395,6 +395,18 @@ class TestCache < Test::Unit::TestCase
     assert_raise(NoMethodError) { @cache.freeze }
   end
 
+  def test_marshal_dump_load
+    assert_nothing_raised { Marshal.load(Marshal.dump(@cache)) }
+    @cache[:a] = 1
+    assert_equal 1, Marshal.load(Marshal.dump(@cache))[:a]
+  end
+
+  def test_marshal_dump_doesnt_work_with_default_proc
+    assert_raise(TypeError) do
+      Marshal.dump(ThreadSafe::Cache.new {})
+    end
+  end
+
   private
   def assert_valid_option(option_name, value)
     assert_valid_options(option_name => value)
