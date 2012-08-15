@@ -78,6 +78,8 @@ module ThreadSafe
       count
     end
 
+    undef :freeze
+
     private
     def initialize_copy(other)
       super

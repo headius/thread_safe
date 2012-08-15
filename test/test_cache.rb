@@ -391,6 +391,10 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_is_unfreezable
+    assert_raise(NoMethodError) { @cache.freeze }
+  end
+
   private
   def assert_valid_option(option_name, value)
     assert_valid_options(option_name => value)
