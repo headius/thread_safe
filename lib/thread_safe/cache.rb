@@ -77,6 +77,12 @@ module ThreadSafe
       true
     end
 
+    def size
+      count = 0
+      each_pair {|k, v| count += 1}
+      count
+    end
+
     private
     def validate_options_hash!(options)
       if (initial_capacity = options[:initial_capacity]) && (!initial_capacity.kind_of?(Fixnum) || initial_capacity < 0)

@@ -365,6 +365,18 @@ class TestCache < Test::Unit::TestCase
     assert_invalid_option(:concurrency_level, -1)
   end
 
+  def test_size
+    assert_equal 0, @cache.size
+    @cache[:a] = 1
+    assert_equal 1, @cache.size
+    @cache[:b] = 1
+    assert_equal 2, @cache.size
+    @cache.delete(:a)
+    assert_equal 1, @cache.size
+    @cache.delete(:b)
+    assert_equal 0, @cache.size
+  end
+
   private
   def assert_valid_option(option_name, value)
     assert_valid_options(option_name => value)
