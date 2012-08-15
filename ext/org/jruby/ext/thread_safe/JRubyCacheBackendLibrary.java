@@ -12,8 +12,6 @@ import org.jruby.runtime.load.Library;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.jruby.CompatVersion.RUBY1_8;
-import static org.jruby.CompatVersion.RUBY1_9;
 import static org.jruby.runtime.Visibility.PRIVATE;
 
 /**
@@ -21,21 +19,21 @@ import static org.jruby.runtime.Visibility.PRIVATE;
  * 
  * @author thedarkone
  */
-public class ConcurrentCacheBackendLibrary implements Library {
+public class JRubyCacheBackendLibrary implements Library {
     public void load(Ruby runtime, boolean wrap) throws IOException {
-        RubyClass jrubyRefClass = runtime.defineClassUnder("ConcurrentCacheBackend", runtime.getObject(), BACKEND_ALLOCATOR, runtime.getModule("ThreadSafe"));
+        RubyClass jrubyRefClass = runtime.defineClassUnder("JRubyCacheBackend", runtime.getObject(), BACKEND_ALLOCATOR, runtime.getModule("ThreadSafe"));
         jrubyRefClass.setAllocator(BACKEND_ALLOCATOR);
-        jrubyRefClass.defineAnnotatedMethods(ConcurrentCacheBackend.class);
+        jrubyRefClass.defineAnnotatedMethods(JRubyCacheBackend.class);
     }
     
     private static final ObjectAllocator BACKEND_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klazz) {
-            return new ConcurrentCacheBackend(runtime, klazz);
+            return new JRubyCacheBackend(runtime, klazz);
         }
     };
 
-    @JRubyClass(name="ConcurrentCacheBackend", parent="Object")
-    public static class ConcurrentCacheBackend extends RubyObject {
+    @JRubyClass(name="JRubyCacheBackend", parent="Object")
+    public static class JRubyCacheBackend extends RubyObject {
         // Defaults used by the CHM
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
@@ -43,7 +41,7 @@ public class ConcurrentCacheBackendLibrary implements Library {
 
         private ComputableConcurrentHashMap<IRubyObject, IRubyObject> map;
 
-        public ConcurrentCacheBackend(Ruby runtime, RubyClass klass) {
+        public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
             super(runtime, klass);
         }
 
@@ -144,7 +142,7 @@ public class ConcurrentCacheBackendLibrary implements Library {
         }
 
         @JRubyMethod(visibility = PRIVATE)
-        public ConcurrentCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
+        public JRubyCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
             this.map = new ComputableConcurrentHashMap<IRubyObject, IRubyObject>();
             return this;
         }

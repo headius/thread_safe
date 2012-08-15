@@ -1,24 +1,19 @@
 require 'thread'
 
 module ThreadSafe
-  autoload :ConcurrentCacheBackend,    'thread_safe/concurrent_cache_backend'
+  autoload :JRubyCacheBackend,         'thread_safe/jruby_cache_backend'
   autoload :MriCacheBackend,           'thread_safe/mri_cache_backend'
   autoload :NonConcurrentCacheBackend, 'thread_safe/non_concurrent_cache_backend'
   autoload :SynchronizedCacheBackend,  'thread_safe/synchronized_cache_backend'
 
-  begin
-    concurrent_cache_backend = ConcurrentCacheBackend # trigger autoload
-  rescue LoadError
-  end
-
-  unless concurrent_cache_backend
-    if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'ruby'
-      ConcurrentCacheBackend = MriCacheBackend
+  ConcurrentCacheBackend =
+    case defined?(RUBY_ENGINE) && RUBY_ENGINE
+    when 'jruby'; JRubyCacheBackend
+    when 'ruby';  MriCacheBackend
     else
       warn 'ThreadSafe: unsupported Ruby engine, using a fully synchronized ThreadSafe::Cache implementation' if $VERBOSE
-      ConcurrentCacheBackend = SynchronizedCacheBackend
+      SynchronizedCacheBackend
     end
-  end
 
   class Cache < ConcurrentCacheBackend
     def initialize(options = nil, &block)
