@@ -27,57 +27,72 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_retrieval
-    assert_equal nil, @cache[:a]
-    @cache[:a] = 1
-    assert_equal 1,   @cache[:a]
+    assert_size_change 1 do
+      assert_equal nil, @cache[:a]
+      @cache[:a] = 1
+      assert_equal 1,   @cache[:a]
+    end
   end
 
   def test_put_if_absent
-    assert_equal nil, @cache.put_if_absent(:a, 1)
-    assert_equal 1,   @cache.put_if_absent(:a, 1)
-    assert_equal 1,   @cache.put_if_absent(:a, 2)
-    assert_equal 1,   @cache[:a]
+    assert_size_change 1 do
+      assert_equal nil, @cache.put_if_absent(:a, 1)
+      assert_equal 1,   @cache.put_if_absent(:a, 1)
+      assert_equal 1,   @cache.put_if_absent(:a, 2)
+      assert_equal 1,   @cache[:a]
+    end
   end
 
   def test_put_if_absent_with_default_proc
     @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
-    assert_equal nil, @cache.put_if_absent(:a, 1)
-    assert_equal 1,   @cache.put_if_absent(:a, 1)
-    assert_equal 1,   @cache.put_if_absent(:a, 2)
-    assert_equal 1,   @cache[:a]
+    assert_size_change 1 do
+      assert_equal nil, @cache.put_if_absent(:a, 1)
+      assert_equal 1,   @cache.put_if_absent(:a, 1)
+      assert_equal 1,   @cache.put_if_absent(:a, 2)
+      assert_equal 1,   @cache[:a]
+    end
   end
 
   def test_compute_if_absent
-    assert_equal(1,   (@cache.compute_if_absent(:a) {1}))
-    assert_equal(1,   (@cache.compute_if_absent(:a) {2}))
-    assert_equal 1,    @cache[:a]
-    @cache[:b] = nil
-    assert_equal(nil, (@cache.compute_if_absent(:b) {1}))
+    assert_size_change 2 do
+      assert_equal(1,   (@cache.compute_if_absent(:a) {1}))
+      assert_equal(1,   (@cache.compute_if_absent(:a) {2}))
+      assert_equal 1,    @cache[:a]
+      @cache[:b] = nil
+      assert_equal(nil, (@cache.compute_if_absent(:b) {1}))
+    end
   end
 
   def test_compute_if_absent_with_default_proc
     @cache = ThreadSafe::Cache.new {|h, k| h[k] = 1}
-    assert_equal(2,   (@cache.compute_if_absent(:a) {2}))
-    assert_equal 2,    @cache[:a]
-    assert_equal(nil, (@cache.compute_if_absent(:b) {}))
-    assert_equal nil,  @cache[:b]
-    assert_equal true, @cache.key?(:b)
+    assert_size_change 2 do
+      assert_equal(2,   (@cache.compute_if_absent(:a) {2}))
+      assert_equal 2,    @cache[:a]
+      assert_equal(nil, (@cache.compute_if_absent(:b) {}))
+      assert_equal nil,  @cache[:b]
+      assert_equal true, @cache.key?(:b)
+    end
   end
 
   def test_compute_if_absent_with_return
     returning_lambda = lambda do
       @cache.compute_if_absent(:a) { return 1 }
     end
-    assert_equal(1, returning_lambda.call)
-    assert_equal false, @cache.key?(:a)
+
+    assert_no_size_change do
+      assert_equal(1, returning_lambda.call)
+      assert_equal false, @cache.key?(:a)
+    end
   end
 
   def test_compute_if_absent_exception
     exception_klass = Class.new(Exception)
-    assert_raise(exception_klass) do
-      @cache.compute_if_absent(:a) { raise exception_klass, '' }
+    assert_no_size_change do
+      assert_raise(exception_klass) do
+        @cache.compute_if_absent(:a) { raise exception_klass, '' }
+      end
+      assert_equal false, @cache.key?(:a)
     end
-    assert_equal false, @cache.key?(:a)
   end
 
   def test_compute_if_absent_atomicity
@@ -94,73 +109,85 @@ class TestCache < Test::Unit::TestCase
       compute_started.await
     end
 
-    late_compute_threads = Array.new(late_compute_threads_count) do
-      Thread.new do
-        block_until_compute_started.call('compute_if_absent')
-        assert_equal(1, (@cache.compute_if_absent(:a) { flunk }))
+    assert_size_change 1 do
+      late_compute_threads = Array.new(late_compute_threads_count) do
+        Thread.new do
+          block_until_compute_started.call('compute_if_absent')
+          assert_equal(1, (@cache.compute_if_absent(:a) { flunk }))
+        end
       end
-    end
 
-    late_put_if_absent_threads = Array.new(late_put_if_absent_threads_count) do
-      Thread.new do
-        block_until_compute_started.call('put_if_absent')
-        assert_equal(1, @cache.put_if_absent(:a, 2))
+      late_put_if_absent_threads = Array.new(late_put_if_absent_threads_count) do
+        Thread.new do
+          block_until_compute_started.call('put_if_absent')
+          assert_equal(1, @cache.put_if_absent(:a, 2))
+        end
       end
-    end
 
-    getter_threads = Array.new(getter_threads_count) do
-      Thread.new do
-        block_until_compute_started.call('getter')
-        Thread.pass while @cache[:a].nil?
-        assert_equal 1, @cache[:a]
+      getter_threads = Array.new(getter_threads_count) do
+        Thread.new do
+          block_until_compute_started.call('getter')
+          Thread.pass while @cache[:a].nil?
+          assert_equal 1, @cache[:a]
+        end
       end
-    end
 
-    Thread.new do
-      @cache.compute_if_absent(:a) do
-        compute_started.release
-        compute_proceed.await
-        sleep(0.2)
-        1
-      end
-    end.join
-    (late_compute_threads + late_put_if_absent_threads + getter_threads).each(&:join)
+      Thread.new do
+        @cache.compute_if_absent(:a) do
+          compute_started.release
+          compute_proceed.await
+          sleep(0.2)
+          1
+        end
+      end.join
+      (late_compute_threads + late_put_if_absent_threads + getter_threads).each(&:join)
+    end
   end
 
   def test_replace_pair
-    assert_equal false, @cache.replace_pair(:a, 1, 2)
-    @cache[:a] = 1
-    assert_equal true,  @cache.replace_pair(:a, 1, 2)
-    assert_equal false, @cache.replace_pair(:a, 1, 2)
-    assert_equal 2,     @cache[:a]
-    assert_equal true,  @cache.replace_pair(:a, 2, 2)
-    assert_equal 2,     @cache[:a]
-    assert_equal true,  @cache.replace_pair(:a, 2, nil)
-    assert_equal false, @cache.replace_pair(:a, 2, nil)
-    assert_equal nil,   @cache[:a]
-    assert_equal true,  @cache.key?(:a)
-    assert_equal true,  @cache.replace_pair(:a, nil, nil)
-    assert_equal true,  @cache.key?(:a)
-    assert_equal true,  @cache.replace_pair(:a, nil, 1)
-    assert_equal 1,     @cache[:a]
+    assert_no_size_change do
+      assert_equal false, @cache.replace_pair(:a, 1, 2)
+    end
+    assert_size_change 1 do
+      @cache[:a] = 1
+      assert_equal true,  @cache.replace_pair(:a, 1, 2)
+      assert_equal false, @cache.replace_pair(:a, 1, 2)
+      assert_equal 2,     @cache[:a]
+      assert_equal true,  @cache.replace_pair(:a, 2, 2)
+      assert_equal 2,     @cache[:a]
+      assert_equal true,  @cache.replace_pair(:a, 2, nil)
+      assert_equal false, @cache.replace_pair(:a, 2, nil)
+      assert_equal nil,   @cache[:a]
+      assert_equal true,  @cache.key?(:a)
+      assert_equal true,  @cache.replace_pair(:a, nil, nil)
+      assert_equal true,  @cache.key?(:a)
+      assert_equal true,  @cache.replace_pair(:a, nil, 1)
+      assert_equal 1,     @cache[:a]
+    end
   end
 
   def test_replace_if_exists
-    assert_equal nil,   @cache.replace_if_exists(:a, 1)
-    assert_equal false, @cache.key?(:a)
-    @cache[:a] = 1
-    assert_equal 1,     @cache.replace_if_exists(:a, 2)
-    assert_equal 2,     @cache[:a]
-    assert_equal 2,     @cache.replace_if_exists(:a, nil)
-    assert_equal nil,   @cache[:a]
-    assert_equal nil,   @cache.replace_if_exists(:a, 1)
-    assert_equal 1,     @cache[:a]
+    assert_no_size_change do
+      assert_equal nil,   @cache.replace_if_exists(:a, 1)
+      assert_equal false, @cache.key?(:a)
+    end
+    assert_size_change 1 do
+      @cache[:a] = 1
+      assert_equal 1,     @cache.replace_if_exists(:a, 2)
+      assert_equal 2,     @cache[:a]
+      assert_equal 2,     @cache.replace_if_exists(:a, nil)
+      assert_equal nil,   @cache[:a]
+      assert_equal nil,   @cache.replace_if_exists(:a, 1)
+      assert_equal 1,     @cache[:a]
+    end
   end
 
   def test_replace_if_exists_with_default_proc
     @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
-    assert_equal nil,   @cache.replace_if_exists(:a, 1)
-    assert_equal false, @cache.key?(:a)
+    assert_no_size_change do
+      assert_equal nil,   @cache.replace_if_exists(:a, 1)
+      assert_equal false, @cache.key?(:a)
+    end
   end
 
   def test_key
@@ -170,58 +197,88 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_delete
-    assert_equal nil,   @cache.delete(:a)
+    assert_no_size_change do
+      assert_equal nil,   @cache.delete(:a)
+    end
     @cache[:a] = 1
-    assert_equal 1,     @cache.delete(:a)
-    assert_equal nil,   @cache[:a]
-    assert_equal false, @cache.key?(:a)
-    assert_equal nil,   @cache.delete(:a)
+    assert_size_change -1 do
+      assert_equal 1,     @cache.delete(:a)
+    end
+    assert_no_size_change do
+      assert_equal nil,   @cache[:a]
+      assert_equal false, @cache.key?(:a)
+      assert_equal nil,   @cache.delete(:a)
+    end
   end
 
   def test_delete_pair
-    assert_equal false, @cache.delete_pair(:a, 2)
+    assert_no_size_change do
+      assert_equal false, @cache.delete_pair(:a, 2)
+    end
     @cache[:a] = 1
-    assert_equal false, @cache.delete_pair(:a, 2)
-    assert_equal 1,     @cache[:a]
-    assert_equal true,  @cache.delete_pair(:a, 1)
-    assert_equal false, @cache.delete_pair(:a, 1)
-    assert_equal false, @cache.key?(:a)
+    assert_no_size_change do
+      assert_equal false, @cache.delete_pair(:a, 2)
+    end
+    assert_size_change -1 do
+      assert_equal 1,     @cache[:a]
+      assert_equal true,  @cache.delete_pair(:a, 1)
+      assert_equal false, @cache.delete_pair(:a, 1)
+      assert_equal false, @cache.key?(:a)
+    end
   end
 
   def test_default_proc
-    cache = ThreadSafe::Cache.new {|h,k| h[k] = 1}
-    assert_equal false, cache.key?(:a)
-    assert_equal 1,     cache[:a]
-    assert_equal true,  cache.key?(:a)
+    @cache = ThreadSafe::Cache.new {|h,k| h[k] = 1}
+    assert_no_size_change do
+      assert_equal false, @cache.key?(:a)
+    end
+    assert_size_change 1 do
+      assert_equal 1,     @cache[:a]
+      assert_equal true,  @cache.key?(:a)
+    end
   end
 
   def test_falsy_default_proc
-    cache = ThreadSafe::Cache.new {|h,k| h[k] = nil}
-    assert_equal false, cache.key?(:a)
-    assert_equal nil,   cache[:a]
-    assert_equal true,  cache.key?(:a)
+    @cache = ThreadSafe::Cache.new {|h,k| h[k] = nil}
+    assert_no_size_change do
+      assert_equal false, @cache.key?(:a)
+    end
+    assert_size_change 1 do
+      assert_equal nil,   @cache[:a]
+      assert_equal true,  @cache.key?(:a)
+    end
   end
 
   def test_fetch
-    assert_equal nil,   @cache.fetch(:a)
-    assert_equal false, @cache.key?(:a)
+    assert_no_size_change do
+      assert_equal nil,   @cache.fetch(:a)
+      assert_equal false, @cache.key?(:a)
+    end
 
-    assert_equal(1, (@cache.fetch(:a) {1}))
+    assert_size_change 1 do
+      assert_equal(1, (@cache.fetch(:a) {1}))
+    end
 
-    assert_equal true, @cache.key?(:a)
-    assert_equal 1,    @cache[:a]
-    assert_equal 1,    @cache.fetch(:a)
+    assert_no_size_change do
+      assert_equal true, @cache.key?(:a)
+      assert_equal 1,    @cache[:a]
+      assert_equal 1,    @cache.fetch(:a)
 
-    assert_equal(1, (@cache.fetch(:a) {flunk}))
+      assert_equal(1, (@cache.fetch(:a) {flunk}))
+    end
   end
 
   def test_falsy_fetch
     assert_equal false, @cache.key?(:a)
 
-    assert_equal(nil, (@cache.fetch(:a) {}))
+    assert_size_change 1 do
+      assert_equal(nil, (@cache.fetch(:a) {}))
+    end
 
-    assert_equal true, @cache.key?(:a)
-    assert_equal(nil, (@cache.fetch(:a) {flunk}))
+    assert_no_size_change do
+      assert_equal true, @cache.key?(:a)
+      assert_equal(nil, (@cache.fetch(:a) {flunk}))
+    end
   end
 
   def test_fetch_with_return
@@ -229,15 +286,19 @@ class TestCache < Test::Unit::TestCase
       @cache.fetch(:a) { return 10 }
     end.call
 
-    assert_equal 10,    r
-    assert_equal false, @cache.key?(:a)
+    assert_no_size_change do
+      assert_equal 10,    r
+      assert_equal false, @cache.key?(:a)
+    end
   end
 
   def test_clear
     @cache[:a] = 1
-    assert_equal @cache, @cache.clear
-    assert_equal false,  @cache.key?(:a)
-    assert_equal nil,    @cache[:a]
+    assert_size_change -1 do
+      assert_equal @cache, @cache.clear
+      assert_equal false,  @cache.key?(:a)
+      assert_equal nil,    @cache[:a]
+    end
   end
 
   def test_each_pair
@@ -278,8 +339,10 @@ class TestCache < Test::Unit::TestCase
     @cache[:c] = 1
 
     assert_nothing_raised do
-      @cache.each_pair do |k, v|
-        @cache[:z] = 1
+      assert_size_change 1 do
+        @cache.each_pair do |k, v|
+          @cache[:z] = 1
+        end
       end
     end
   end
@@ -391,9 +454,18 @@ class TestCache < Test::Unit::TestCase
       cache[:a] = 1
       dupped = cache.send(meth)
       assert_equal 1, dupped[:a]
-      cache[:b] = 1
+      assert_equal 1, dupped.size
+      assert_size_change 1, cache do
+        assert_no_size_change dupped do
+          cache[:b] = 1
+        end
+      end
       assert_equal false, dupped.key?(:b)
-      dupped.delete(:a)
+      assert_no_size_change cache do
+        assert_size_change -1, dupped do
+          dupped.delete(:a)
+        end
+      end
       assert_equal false, dupped.key?(:a)
       assert_equal true,  cache.key?(:a)
     end
@@ -404,9 +476,14 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_marshal_dump_load
-    assert_nothing_raised { Marshal.load(Marshal.dump(@cache)) }
+    assert_nothing_raised do
+      new_cache = Marshal.load(Marshal.dump(@cache))
+      assert_equal 0, new_cache.size
+    end
     @cache[:a] = 1
-    assert_equal 1, Marshal.load(Marshal.dump(@cache))[:a]
+    new_cache = Marshal.load(Marshal.dump(@cache))
+    assert_equal 1, @cache[:a]
+    assert_equal 1, new_cache.size
   end
 
   def test_marshal_dump_doesnt_work_with_default_proc
@@ -430,5 +507,15 @@ class TestCache < Test::Unit::TestCase
 
   def assert_invalid_options(options)
     assert_raise(ArgumentError) { ThreadSafe::Cache.new(options) }
+  end
+
+  def assert_size_change(change, cache = @cache)
+    start = cache.size
+    yield
+    assert_equal change, cache.size - start
+  end
+
+  def assert_no_size_change(cache = @cache, &block)
+    assert_size_change(0, cache, &block)
   end
 end
