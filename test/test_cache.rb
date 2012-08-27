@@ -64,6 +64,14 @@ class TestCache < Test::Unit::TestCase
     assert_equal true, @cache.key?(:b)
   end
 
+  def test_compute_if_absent_with_return
+    returning_lambda = lambda do
+      @cache.compute_if_absent(:a) { return 1 }
+    end
+    assert_equal(1, returning_lambda.call)
+    assert_equal false, @cache.key?(:a)
+  end
+
   def test_compute_if_absent_exception
     exception_klass = Class.new(Exception)
     assert_raise(exception_klass) do
