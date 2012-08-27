@@ -450,7 +450,7 @@ class TestCache < Test::Unit::TestCase
 
   def test_dup_clone
     [:dup, :clone].each do |meth|
-      cache = ThreadSafe::Cache.new
+      cache = ThreadSafe::Cache.new {|h, k| h[k] = :default_value}
       cache[:a] = 1
       dupped = cache.send(meth)
       assert_equal 1, dupped[:a]
@@ -468,6 +468,19 @@ class TestCache < Test::Unit::TestCase
       end
       assert_equal false, dupped.key?(:a)
       assert_equal true,  cache.key?(:a)
+      # test default proc
+      assert_size_change 1, cache do
+        assert_no_size_change dupped do
+          assert_equal :default_value, cache[:c]
+          assert_equal false,          dupped.key?(:c)
+        end
+      end
+      assert_no_size_change cache do
+        assert_size_change 1, dupped do
+          assert_equal :default_value, dupped[:d]
+          assert_equal false,          cache.key?(:d)
+        end
+      end
     end
   end
 
