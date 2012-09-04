@@ -22,7 +22,7 @@ class TestCacheTorture < Test::Unit::TestCase
     end
   end
 
-  THREAD_COUNT  = 20
+  THREAD_COUNT  = 40
   KEY_COUNT     = (((2**13) - 2) * 0.75).to_i # get close to the doubling cliff
   LOW_KEY_COUNT = (((2**8 ) - 2) * 0.75).to_i # get close to the doubling cliff
 
@@ -40,8 +40,8 @@ class TestCacheTorture < Test::Unit::TestCase
     :cache_setup => lambda {|options, keys| ThreadSafe::Cache.new}
   }
 
-  LOW_KEY_COUNT_OPTIONS    = {:loop_count => 1000,   :key_count => LOW_KEY_COUNT}
-  SINGLE_KEY_COUNT_OPTIONS = {:loop_count => 25_000, :key_count => 1}
+  LOW_KEY_COUNT_OPTIONS    = {:loop_count => 150,    :key_count => LOW_KEY_COUNT}
+  SINGLE_KEY_COUNT_OPTIONS = {:loop_count => 1_000,  :key_count => 1}
 
   def test_concurrency
     code = <<-RUBY_EVAL
@@ -54,7 +54,7 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   def test_put_if_absent
-    do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 200_000) do |result, cache, options|
+    do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options|
       assert_equal(options[:key_count], sum(result))
     end
   end
@@ -153,7 +153,7 @@ class TestCacheTorture < Test::Unit::TestCase
       if options[:key_count] > 1
         options[:key_count] = (options[:key_count] / 20).to_i
         keys = to_hash_collision_keys_array(options[:key_count])
-        run_thread_loop(meth, keys, options, &block)
+        run_thread_loop(meth, keys, options.merge(:loop_count => (options[:loop_count] * 5)), &block)
       end
     end
   end
