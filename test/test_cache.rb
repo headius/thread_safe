@@ -144,6 +144,55 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_updates_dont_block_reads
+    getters_count = 20
+    key_struct    = Struct.new(:key, :hash)
+    keys          = [key_struct.new(1, 100), key_struct.new(2, 100), key_struct.new(3, 100)] # hash colliding keys
+    inserted_keys = []
+
+    keys.each do |key, i|
+      compute_started  = ThreadSafe::Test::Latch.new(1)
+      compute_finished = ThreadSafe::Test::Latch.new(1)
+      getters_started  = ThreadSafe::Test::Latch.new(getters_count)
+      getters_finished = ThreadSafe::Test::Latch.new(getters_count)
+
+      computer_thread = Thread.new do
+        getters_started.await
+        @cache.compute_if_absent(key) do
+          compute_started.release
+          getters_finished.await
+          1
+        end
+        compute_finished.release
+      end
+
+      getter_threads = (1..getters_count).map do
+        Thread.new do
+          getters_started.release
+          inserted_keys.each do |inserted_key|
+            assert_equal true, @cache.key?(inserted_key)
+            assert_equal 1,    @cache[inserted_key]
+          end
+          assert_equal false, @cache.key?(key)
+          compute_started.await
+          inserted_keys.each do |inserted_key|
+            assert_equal true, @cache.key?(inserted_key)
+            assert_equal 1,    @cache[inserted_key]
+          end
+          assert_equal false, @cache.key?(key)
+          assert_equal nil,   @cache[key]
+          getters_finished.release
+          compute_finished.await
+          assert_equal true,  @cache.key?(key)
+          assert_equal 1,     @cache[key]
+        end
+      end
+
+      (getter_threads << computer_thread).map {|t| assert(t.join(2))} # asserting no deadlocks
+      inserted_keys << key
+    end
+  end
+
   def test_replace_pair
     assert_no_size_change do
       assert_equal false, @cache.replace_pair(:a, 1, 2)
