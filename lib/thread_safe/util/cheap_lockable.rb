@@ -14,14 +14,14 @@ module ThreadSafe
           end
         end
 
-        def cheap_wait(timeout = nil)
+        def cheap_wait
           wchan = Rubinius::Channel.new
 
           begin
             waiters = @waiters ||= []
             waiters.push wchan
             Rubinius.unlock(self)
-            signaled = wchan.receive_timeout timeout
+            signaled = wchan.receive_timeout nil
           ensure
             Rubinius.lock(self)
 
@@ -32,11 +32,7 @@ module ThreadSafe
             end
           end
 
-          if timeout
-            !!signaled
-          else
-            self
-          end
+          self
         end
 
         def cheap_broadcast
