@@ -15,14 +15,6 @@ module ThreadSafe
       WRITE_LOCK.synchronize { super }
     end
 
-    def put_if_absent(key, value)
-      if stored_value = _get(key)
-        stored_value
-      else
-        WRITE_LOCK.synchronize { super }
-      end
-    end
-
     def compute_if_absent(key)
       if stored_value = _get(key)
         stored_value

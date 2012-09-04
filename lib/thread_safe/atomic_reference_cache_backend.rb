@@ -219,15 +219,6 @@ module ThreadSafe
       end
     end
 
-    def put_if_absent(key, value)
-      computed = false
-      result = compute_if_absent(key) do
-        computed = true
-        value
-      end
-      computed ? nil : result
-    end
-
     def replace_pair(key, old_value, new_value)
       NULL != internal_replace(key, new_value) {|current_value| current_value == old_value}
     end

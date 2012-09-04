@@ -49,6 +49,15 @@ module ThreadSafe
       end
     end
 
+    def put_if_absent(key, value)
+      computed = false
+      result = compute_if_absent(key) do
+        computed = true
+        value
+      end
+      computed ? nil : result
+    end unless method_defined?(:put_if_absent)
+
     def keys
       arr = []
       each_pair {|k, v| arr << k}

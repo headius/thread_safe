@@ -14,15 +14,6 @@ module ThreadSafe
       @backend[key] = value
     end
 
-    def put_if_absent(key, value)
-      if @backend.key?(key)
-        @backend[key]
-      else
-        @backend[key] = value
-        nil
-      end
-    end
-
     def compute_if_absent(key)
       if (stored_value = @backend[key]) || @backend.key?(key)
         stored_value
