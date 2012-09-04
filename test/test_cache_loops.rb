@@ -56,6 +56,7 @@ class TestCacheTorture < Test::Unit::TestCase
   def test_put_if_absent
     do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options|
       assert_equal(options[:key_count], sum(result))
+      assert_equal(options[:key_count], cache.size)
     end
   end
 
@@ -63,6 +64,7 @@ class TestCacheTorture < Test::Unit::TestCase
     code = 'cache.compute_if_absent(key) { acc += 1; key }'
     do_thread_loop(:compute_if_absent, code) do |result, cache, options|
       assert_equal(options[:key_count], sum(result))
+      assert_equal(options[:key_count], cache.size)
     end
   end
 
@@ -76,6 +78,7 @@ class TestCacheTorture < Test::Unit::TestCase
     RUBY_EVAL
     do_thread_loop(:compute_put_if_absent, code) do |result, cache, options|
       assert_equal(options[:key_count], sum(result))
+      assert_equal(options[:key_count], cache.size)
     end
   end
 
@@ -105,6 +108,7 @@ class TestCacheTorture < Test::Unit::TestCase
     RUBY_EVAL
     do_thread_loop(:count_race, code, :loop_count => 5, :prelude => prelude, :cache_setup => ZERO_VALUE_CACHE_SETUP) do |result, cache, options|
       assert_equal(sum(cache.values), sum(result))
+      assert_equal(options[:key_count], cache.size)
     end
   end
 
@@ -130,6 +134,7 @@ class TestCacheTorture < Test::Unit::TestCase
     RUBY_EVAL
     do_thread_loop(:count_up, code, {:loop_count => 5, :cache_setup => ZERO_VALUE_CACHE_SETUP}.merge(opts)) do |result, cache, options|
       assert_equal(sum(cache.values), sum(result))
+      assert_equal(options[:key_count], cache.size)
     end
   end
 
