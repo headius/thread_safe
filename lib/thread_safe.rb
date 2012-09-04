@@ -2,6 +2,7 @@ require 'thread_safe/version'
 
 module ThreadSafe
   autoload :Cache, 'thread_safe/cache'
+  autoload :Util,  'thread_safe/util'
   
   if defined?(JRUBY_VERSION)
     require 'jruby/synchronized'

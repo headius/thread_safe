@@ -15,4 +15,6 @@ Gem::Specification.new do |gem|
   gem.name          = "thread_safe"
   gem.require_paths = ["lib"]
   gem.version       = Threadsafe::VERSION
+
+  gem.add_dependency 'atomic'
 end
