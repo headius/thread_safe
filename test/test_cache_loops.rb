@@ -210,7 +210,7 @@ class TestCacheTorture < Test::Unit::TestCase
       def #{outer_meth_name}_multiple_keys(cache, keys, loop_count)
         total_length = keys.size
         acc = 0
-        inc = 50
+        inc = 100
         loop_count.times do
           i = 0
           pre_loop_inc = total_length % inc
@@ -228,7 +228,7 @@ class TestCacheTorture < Test::Unit::TestCase
         acc = 0
         i   = 0
         while i < loop_count
-          acc = #{inner_meth_name}_single_key(cache, key, 0, 50, acc)
+          acc = #{inner_meth_name}_single_key(cache, key, 0, 100, acc)
           i += 1
         end
         acc
