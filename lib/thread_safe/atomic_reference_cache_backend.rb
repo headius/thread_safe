@@ -161,7 +161,7 @@ module ThreadSafe
     end
 
     def []=(key, value)
-      internal_put(key, value)
+      get_and_set(key, value)
       value
     end
 
@@ -229,8 +229,24 @@ module ThreadSafe
       end
     end
 
-    def get_and_set(key, value)
-      internal_put(key, value)
+    def get_and_set(key, value) # internalPut in the original CHMV8
+      hash          = key_hash(key)
+      current_table = table || initialize_table
+      while current_table
+        if !(node = current_table.volatile_get(i = current_table.hash_to_index(hash)))
+          if current_table.cas_new_node(i, hash, key, value)
+            increment_size
+            break
+          end
+        elsif (node_hash = node.hash) == MOVED
+          current_table = node.key
+        elsif Node.locked_hash?(node_hash)
+          try_await_lock(current_table, i, node)
+        else
+          succeeded, old_value = attempt_get_and_set(key, value, hash, current_table, i, node, node_hash)
+          break old_value if succeeded
+        end
+      end
     end
 
     def delete(key)
@@ -420,27 +436,7 @@ module ThreadSafe
       end
     end
 
-    def internal_put(key, value)
-      hash          = key_hash(key)
-      current_table = table || initialize_table
-      while current_table
-        if !(node = current_table.volatile_get(i = current_table.hash_to_index(hash)))
-          if current_table.cas_new_node(i, hash, key, value)
-            increment_size
-            break
-          end
-        elsif (node_hash = node.hash) == MOVED
-          current_table = node.key
-        elsif Node.locked_hash?(node_hash)
-          try_await_lock(current_table, i, node)
-        else
-          succeeded, old_value = attempt_internal_put(key, value, hash, current_table, i, node, node_hash)
-          return old_value if succeeded
-        end
-      end
-    end
-
-    def attempt_internal_put(key, value, hash, current_table, i, node, node_hash)
+    def attempt_get_and_set(key, value, hash, current_table, i, node, node_hash)
       node_nesting = nil
       current_table.try_lock_via_hash(i, node, node_hash) do
         node_nesting    = 1
