@@ -94,6 +94,12 @@ class TestCacheTorture < Test::Unit::TestCase
     add_remove(SINGLE_KEY_COUNT_OPTIONS)
   end
 
+  def test_add_remove_indiscriminate
+    add_remove_indiscriminate
+    add_remove_indiscriminate(LOW_KEY_COUNT_OPTIONS)
+    add_remove_indiscriminate(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
   def test_count_up
     count_up
     count_up(LOW_KEY_COUNT_OPTIONS)
@@ -120,6 +126,20 @@ class TestCacheTorture < Test::Unit::TestCase
         acc += 1 unless cache.put_if_absent(key, key)
       else
         acc -= 1 if cache.delete_pair(key, key)
+      end
+    RUBY_EVAL
+    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options|
+      assert_equal(cache.size, sum(result))
+    end
+  end
+
+  def add_remove_indiscriminate(opts = {})
+    prelude = 'do_add = rand(2) == 1'
+    code = <<-RUBY_EVAL
+      if do_add
+        acc += 1 unless cache.put_if_absent(key, key)
+      else
+        acc -= 1 if cache.delete(key)
       end
     RUBY_EVAL
     do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options|
