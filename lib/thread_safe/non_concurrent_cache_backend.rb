@@ -38,6 +38,12 @@ module ThreadSafe
       end
     end
 
+    def get_and_set(key, value)
+      stored_value = @backend[key]
+      @backend[key] = value
+      stored_value
+    end
+
     def key?(key)
       @backend.key?(key)
     end

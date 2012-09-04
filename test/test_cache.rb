@@ -192,6 +192,28 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_get_and_set
+    assert_size_change 1 do
+      assert_equal nil,   @cache.get_and_set(:a, 1)
+      assert_equal true,  @cache.key?(:a)
+      assert_equal 1,     @cache[:a]
+      assert_equal 1,     @cache.get_and_set(:a, 2)
+      assert_equal 2,     @cache.get_and_set(:a, nil)
+      assert_equal nil,   @cache[:a]
+      assert_equal true,  @cache.key?(:a)
+      assert_equal nil,   @cache.get_and_set(:a, 1)
+      assert_equal 1,     @cache[:a]
+    end
+  end
+
+  def test_get_and_set_with_default_proc
+    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
+    assert_size_change 1 do
+      assert_equal nil, @cache.get_and_set(:a, 1)
+      assert_equal 1,   @cache[:a]
+    end
+  end
+
   def test_key
     assert_equal false, @cache.key?(:a)
     @cache[:a] = 1

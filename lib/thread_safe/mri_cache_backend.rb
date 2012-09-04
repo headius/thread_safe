@@ -31,6 +31,10 @@ module ThreadSafe
       WRITE_LOCK.synchronize { super }
     end
 
+    def get_and_set(key, value)
+      WRITE_LOCK.synchronize { super }
+    end
+
     def delete(key)
       WRITE_LOCK.synchronize { super }
     end

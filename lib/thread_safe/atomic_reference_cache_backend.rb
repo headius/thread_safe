@@ -229,6 +229,10 @@ module ThreadSafe
       end
     end
 
+    def get_and_set(key, value)
+      internal_put(key, value)
+    end
+
     def delete(key)
       replace_if_exists(key, NULL)
     end

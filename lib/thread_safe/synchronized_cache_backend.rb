@@ -24,6 +24,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def get_and_set(key, value)
+      synchronize { super }
+    end
+
     def key?(key)
       synchronize { super }
     end
