@@ -76,6 +76,10 @@ module ThreadSafe
       self
     end
 
+    def size
+      @backend.size
+    end
+
     alias_method :_get, :[]
     alias_method :_set, :[]=
     private :_get, :_set

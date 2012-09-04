@@ -44,6 +44,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def size
+      synchronize { super }
+    end
+
     private
     def dupped_backend
       synchronize { super }

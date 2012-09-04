@@ -141,6 +141,11 @@ public class JRubyCacheBackendLibrary implements Library {
             return this;
         }
 
+        @JRubyMethod
+        public RubyFixnum size(ThreadContext context) {
+            return context.getRuntime().newFixnum(map.size());
+        }
+
         @JRubyMethod(visibility = PRIVATE)
         public JRubyCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
             this.map = new ComputableConcurrentHashMap<IRubyObject, IRubyObject>();

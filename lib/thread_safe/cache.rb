@@ -53,32 +53,32 @@ module ThreadSafe
       arr = []
       each_pair {|k, v| arr << k}
       arr
-    end
+    end unless method_defined?(:keys)
 
     def values
       arr = []
       each_pair {|k, v| arr << v}
       arr
-    end
+    end unless method_defined?(:values)
 
     def each_key
       each_pair {|k, v| yield k}
-    end
+    end unless method_defined?(:each_key)
 
     def each_value
       each_pair {|k, v| yield v}
-    end
+    end unless method_defined?(:each_value)
 
     def empty?
       each_pair {|k, v| return false}
       true
-    end
+    end unless method_defined?(:empty?)
 
     def size
       count = 0
       each_pair {|k, v| count += 1}
       count
-    end
+    end unless method_defined?(:size)
 
     def marshal_dump
       raise TypeError, "can't dump hash with default proc" if @default_proc
