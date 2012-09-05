@@ -768,7 +768,7 @@ module ThreadSafe
       i              = bin
       while true
         if !(node = table.volatile_get(i))
-          # no lock needed (or available) if bin >= 0
+          # no lock needed (or available) if bin >= 0, because we're not popping values from locked_indexes until we've run through the whole table
           redo unless (bin >= 0 ? table.cas(i, nil, forwarder) : lock_and_clean_up_reverse_forwarders(table, old_table_size, new_table, i, forwarder))
         elsif Node.locked_hash?(node_hash = node.hash)
           locked_indexes ||= Array.new
