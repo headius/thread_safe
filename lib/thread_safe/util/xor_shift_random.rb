@@ -1,9 +1,19 @@
 module ThreadSafe
   module Util
+    # A xorshift random number (positive +Fixnum+s) generator, provides reasonably cheap way to generate thread local random numbers without contending for
+    # the global +Kernel.rand+.
+    # Usage:
+    #   x = XorShiftRandom.get # uses Kernel.rand to generate an initial seed
+    #   while true
+    #     if (x = XorShiftRandom.xorshift).odd? # thread-localy generate a next random number
+    #       do_something_at_random
+    #     end
+    #   end
     module XorShiftRandom
       extend self
       MAX_XOR_SHIFTABLE_INT = MAX_INT - 1
 
+      # Generates an initial non-zero positive +Fixnum+ via +Kernel.rand+.
       def get
         Kernel.rand(MAX_XOR_SHIFTABLE_INT) + 1 # 0 can't be xorshifted
       end

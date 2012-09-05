@@ -1,5 +1,12 @@
 module ThreadSafe
   module Util
+    # A fixed size array with volatile volatile getters/setters.
+    # Usage:
+    #   arr = VolatileTuple.new(16)
+    #   arr.volatile_set(0, :foo)
+    #   arr.volatile_get(0)    # => :foo
+    #   arr.cas(0, :foo, :bar) # => true
+    #   arr.volatile_get(0)    # => :bar
     class VolatileTuple
       include Enumerable
 

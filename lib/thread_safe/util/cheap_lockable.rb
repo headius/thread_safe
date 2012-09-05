@@ -1,5 +1,23 @@
 module ThreadSafe
   module Util
+    # Provides a cheapest possible (mainly in terms of memory usage) +Mutex+ with the +ConditionVariable+ bundled in.
+    #
+    # Usage:
+    #   class A
+    #     include CheapLockable
+    #
+    #     def do_exlusively
+    #       cheap_synchronize { yield }
+    #     end
+    #
+    #     def wait_for_something
+    #       cheap_synchronize do
+    #         cheap_wait until resource_available?
+    #         do_something
+    #         cheap_broadcast # wake up others
+    #       end
+    #     end
+    #   end
     module CheapLockable
       private
       engine = defined?(RUBY_ENGINE) && RUBY_ENGINE
@@ -61,16 +79,21 @@ module ThreadSafe
         extend Volatile
         attr_volatile :mutex
 
+        # Non-reentrant Mutex#syncrhonize
         def cheap_synchronize
           true until (my_mutex = mutex) || cas_mutex(nil, my_mutex = Mutex.new)
           my_mutex.synchronize { yield }
         end
 
+        # Releases this object's +cheap_synchronize+ lock and goes to sleep waiting for other threads to +cheap_broadcast+, reacquires the lock on wakeup.
+        # Must only be called in +cheap_broadcast+'s block.
         def cheap_wait
           conditional_variable = @conditional_variable ||= ConditionVariable.new
           conditional_variable.wait(mutex)
         end
 
+        # Wakes up all threads waiting for this object's +cheap_synchronize+ lock.
+        # Must only be called in +cheap_broadcast+'s block.
         def cheap_broadcast
           if conditional_variable = @conditional_variable
             conditional_variable.broadcast

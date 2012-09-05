@@ -1,6 +1,23 @@
 module ThreadSafe
   module Util
     module Volatile
+      # Provides +volatile+ (in the JVM's sense) attribute accessors implemented atop of the +AtomicReference+s.
+      # Usage:
+      #   class Foo
+      #     extend ThreadSafe::Util::Volatile
+      #     attr_volatile :foo, :bar
+      #
+      #     def initialize(bar)
+      #       super() # must super() into parent initializers before using the volatile attribute accessors
+      #       self.bar = bar
+      #     end
+      #
+      #     def hello
+      #       my_foo = foo # volatile read
+      #       self.foo = 1 # volatile write
+      #       cas_foo(1, 2) # => true | a strong CAS
+      #     end
+      #   end
       def attr_volatile(*attr_names)
         return if attr_names.empty?
         include(Module.new do
