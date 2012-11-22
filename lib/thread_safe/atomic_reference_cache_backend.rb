@@ -406,37 +406,6 @@ module ThreadSafe
       end
     end
 
-    if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'rbx'
-      def compute_if_absent(key)
-        hash          = key_hash(key)
-        current_table = table || initialize_table
-        while true
-          if !(node = current_table.volatile_get(i = current_table.hash_to_index(hash)))
-            succeeded, new_value = current_table.try_to_cas_in_computed(i, hash, key) { yield }
-            if succeeded
-              increment_size
-              return new_value
-            end
-          elsif (node_hash = node.hash) == MOVED
-            current_table = node.key
-          # TODO: fix this
-          # START Rubinius hack
-          # Rubinius seems to go crazy on the full test_cache_loop run without this inlined first iteration of find_value_in_node_list
-          elsif (node_hash & HASH_BITS) == hash && node.key?(key) && NULL != (current_value = node.value)
-            return current_value
-          # END Rubinius hack
-          elsif NULL != (current_value = find_value_in_node_list(node, key, hash, node_hash & HASH_BITS))
-            return current_value
-          elsif Node.locked_hash?(node_hash)
-            try_await_lock(current_table, i, node)
-          else
-            succeeded, value = attempt_internal_compute_if_absent(key, hash, current_table, i, node, node_hash) { yield }
-            return value if succeeded
-          end
-        end
-      end
-    end
-
     def replace_pair(key, old_value, new_value)
       NULL != internal_replace(key, new_value) {|current_value| current_value == old_value}
     end
