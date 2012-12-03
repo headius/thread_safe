@@ -146,8 +146,8 @@ class TestCache < Test::Unit::TestCase
 
   def test_updates_dont_block_reads
     getters_count = 20
-    key_struct    = Struct.new(:key, :hash)
-    keys          = [key_struct.new(1, 100), key_struct.new(2, 100), key_struct.new(3, 100)] # hash colliding keys
+    key_klass     = ThreadSafe::Test::HashCollisionKey
+    keys          = [key_klass.new(1, 100), key_klass.new(2, 100), key_klass.new(3, 100)] # hash colliding keys
     inserted_keys = []
 
     keys.each do |key, i|
