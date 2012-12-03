@@ -6,6 +6,12 @@
 
 package org.jruby.ext.thread_safe.jsr166e;
 
+import org.jruby.RubyClass;
+import org.jruby.RubyNumeric;
+import org.jruby.RubyObject;
+import org.jruby.runtime.ThreadContext;
+import org.jruby.runtime.builtin.IRubyObject;
+
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
@@ -821,21 +827,26 @@ public class ConcurrentHashMapV8<K, V>
             }
         }
 
+        @SuppressWarnings("unchecked") final TreeNode getTreeNode
+        (int h, Object k, TreeNode p) {
+            return getTreeNode(h, (RubyObject)k, p);
+        }
+
         /**
          * Returns the TreeNode (or null if not found) for the given key
          * starting at given root.
          */
         @SuppressWarnings("unchecked") final TreeNode getTreeNode
-        (int h, Object k, TreeNode p) {
-            Class<?> c = k.getClass();
+        (int h, RubyObject k, TreeNode p) {
+            RubyClass c = k.getMetaClass(); boolean kNotComparable = !k.respondsTo("<=>");
             while (p != null) {
-                int dir, ph;  Object pk; Class<?> pc;
+                int dir, ph;  RubyObject pk; RubyClass pc;
                 if ((ph = p.hash) == h) {
-                    if ((pk = p.key) == k || k.equals(pk))
+                    if ((pk = (RubyObject)p.key) == k || k.equals(pk))
                         return p;
-                    if (c != (pc = pk.getClass()) ||
-                            !(k instanceof Comparable) ||
-                            (dir = ((Comparable)k).compareTo((Comparable)pk)) == 0) {
+                    if (c != (pc = (RubyClass)pk.getMetaClass()) ||
+                            kNotComparable ||
+                            (dir = rubyCompare(k, pk)) == 0) {
                         dir = (c == pc) ? 0 : c.getName().compareTo(pc.getName());
                         if (dir == 0) { // if still stuck, need to check both sides
                             TreeNode r = null, pl, pr;
@@ -856,6 +867,13 @@ public class ConcurrentHashMapV8<K, V>
                 p = (dir > 0) ? p.right : p.left;
             }
             return null;
+        }
+
+        int rubyCompare(RubyObject l, RubyObject r) {
+            ThreadContext context = l.getMetaClass().getRuntime().getCurrentContext();
+            IRubyObject result = l.callMethod(context, "<=>", r);
+            int res = result.isNil() ? 0 : RubyNumeric.num2int(result.convertToInteger());
+            return res;
         }
 
         /**
@@ -885,24 +903,30 @@ public class ConcurrentHashMapV8<K, V>
             return r == null ? null : r.val;
         }
 
+        @SuppressWarnings("unchecked") final TreeNode putTreeNode
+                (int h, Object k, Object v) {
+            return putTreeNode(h, (RubyObject)k, v);
+        }
+
         /**
          * Finds or adds a node.
          * @return null if added
          */
         @SuppressWarnings("unchecked") final TreeNode putTreeNode
-        (int h, Object k, Object v) {
-            Class<?> c = k.getClass();
+        (int h, RubyObject k, Object v) {
+            RubyClass c = k.getMetaClass();
+            boolean kNotComparable = !k.respondsTo("<=>");
             TreeNode pp = root, p = null;
             int dir = 0;
             while (pp != null) { // find existing node or leaf to insert at
-                int ph;  Object pk; Class<?> pc;
+                int ph;  RubyObject pk; RubyClass pc;
                 p = pp;
                 if ((ph = p.hash) == h) {
-                    if ((pk = p.key) == k || k.equals(pk))
+                    if ((pk = (RubyObject)p.key) == k || k.equals(pk))
                         return p;
-                    if (c != (pc = pk.getClass()) ||
-                            !(k instanceof Comparable) ||
-                            (dir = ((Comparable)k).compareTo((Comparable)pk)) == 0) {
+                    if (c != (pc = pk.getMetaClass()) ||
+                            kNotComparable ||
+                            (dir = rubyCompare(k, pk)) == 0) {
                         dir = (c == pc) ? 0 : c.getName().compareTo(pc.getName());
                         if (dir == 0) { // if still stuck, need to check both sides
                             TreeNode r = null, pl, pr;
@@ -922,7 +946,7 @@ public class ConcurrentHashMapV8<K, V>
             }
 
             TreeNode f = first;
-            TreeNode x = first = new TreeNode(h, k, v, f, p);
+            TreeNode x = first = new TreeNode(h, (Object)k, v, f, p);
             if (p == null)
                 root = x;
             else { // attach and rebalance; adapted from CLR
