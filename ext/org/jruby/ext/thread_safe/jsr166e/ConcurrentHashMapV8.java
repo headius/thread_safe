@@ -837,15 +837,18 @@ public class ConcurrentHashMapV8<K, V>
                             !(k instanceof Comparable) ||
                             (dir = ((Comparable)k).compareTo((Comparable)pk)) == 0) {
                         dir = (c == pc) ? 0 : c.getName().compareTo(pc.getName());
-                        TreeNode r = null, s = null, pl, pr;
-                        if (dir >= 0) {
-                            if ((pl = p.left) != null && h <= pl.hash)
-                                s = pl;
+                        if (dir == 0) { // if still stuck, need to check both sides
+                            TreeNode r = null, pl, pr;
+                            // try to recurse on the right
+                            if ((pr = p.right) != null && h >= pr.hash && (r = getTreeNode(h, k, pr)) != null) {
+                                return r;
+                            // try to continue iterating on the left side
+                            } else if ((pl = p.left) != null && h <= pl.hash) {
+                                dir = -1;
+                            } else { // no matching node found
+                                return null;
+                            }
                         }
-                        else if ((pr = p.right) != null && h >= pr.hash)
-                            s = pr;
-                        if (s != null && (r = getTreeNode(h, k, s)) != null)
-                            return r;
                     }
                 }
                 else
@@ -901,15 +904,16 @@ public class ConcurrentHashMapV8<K, V>
                             !(k instanceof Comparable) ||
                             (dir = ((Comparable)k).compareTo((Comparable)pk)) == 0) {
                         dir = (c == pc) ? 0 : c.getName().compareTo(pc.getName());
-                        TreeNode r = null, s = null, pl, pr;
-                        if (dir >= 0) {
-                            if ((pl = p.left) != null && h <= pl.hash)
-                                s = pl;
+                        if (dir == 0) { // if still stuck, need to check both sides
+                            TreeNode r = null, pl, pr;
+                            // try to recurse on the right
+                            if ((pr = p.right) != null && h >= pr.hash && (r = getTreeNode(h, k, pr)) != null) {
+                                return r;
+                            // try to continue iterating on the left side
+                            } else if ((pl = p.left) != null && h <= pl.hash) {
+                                dir = -1;
+                            }
                         }
-                        else if ((pr = p.right) != null && h >= pr.hash)
-                            s = pr;
-                        if (s != null && (r = getTreeNode(h, k, s)) != null)
-                            return r;
                     }
                 }
                 else
