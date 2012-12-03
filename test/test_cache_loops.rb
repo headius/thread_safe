@@ -20,6 +20,10 @@ class TestCacheTorture < Test::Unit::TestCase
     def even?
       @key.even?
     end
+
+    def <=>(other) # HashCollisionKeys should only be partially ordered (this tests CHVM8's TreeNodes)
+      (@key.odd? && other.key.odd?) ? 0 : @key <=> other.key
+    end
   end
 
   THREAD_COUNT  = 40
