@@ -254,7 +254,7 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   def to_hash_collision_keys_array(key_count)
-    to_keys_array(key_count).map {|key| ThreadSafe::Test::HashCollisionKey.new(key)}
+    to_keys_array(key_count).map {|key| ThreadSafe::Test::HashCollisionKey(key)}
   end
 
   def sum(result)

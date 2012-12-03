@@ -43,7 +43,7 @@ module ThreadSafe
       end
 
       def eql?(other)
-        other.kind_of?(HashCollisionKey) && @key.eql?(other.key)
+        other.kind_of?(self.class) && @key.eql?(other.key)
       end
 
       def even?
@@ -53,6 +53,13 @@ module ThreadSafe
       def <=>(other) # HashCollisionKeys should only be partially ordered (this tests CHVM8's TreeNodes)
         (@key.odd? && other.key.odd?) ? 0 : @key <=> other.key
       end
+    end
+
+    class HashCollisionKey2 < HashCollisionKey # having 2 separate HCK classes helps for a more thorough CHMV8 testing
+    end
+
+    def self.HashCollisionKey(key)
+      (rand(2) == 0 ? HashCollisionKey : HashCollisionKey2).new(key)
     end
   end
 end
