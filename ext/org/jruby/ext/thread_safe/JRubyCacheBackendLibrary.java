@@ -3,6 +3,7 @@ package org.jruby.ext.thread_safe;
 import org.jruby.*;
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
+import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -39,7 +40,7 @@ public class JRubyCacheBackendLibrary implements Library {
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
         static final int DEFAULT_CONCURRENCY_LEVEL = 16;
 
-        private ComputableConcurrentHashMap<IRubyObject, IRubyObject> map;
+        private ConcurrentHashMapV8<IRubyObject, IRubyObject> map;
 
         public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
             super(runtime, klass);
@@ -47,7 +48,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject initialize(ThreadContext context) {
-            map = new ComputableConcurrentHashMap<IRubyObject, IRubyObject>();
+            map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
             return context.getRuntime().getNil();
         }
 
@@ -57,7 +58,7 @@ public class JRubyCacheBackendLibrary implements Library {
             return context.getRuntime().getNil();
         }
 
-        private ComputableConcurrentHashMap<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
+        private ConcurrentHashMapV8<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
             Ruby runtime = context.getRuntime();
             if (!options.isNil() && options.respondsTo("[]")) {
                 IRubyObject rInitialCapacity  = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
@@ -66,9 +67,9 @@ public class JRubyCacheBackendLibrary implements Library {
                 int initialCapacity  = !rInitialCapacity.isNil() ?  RubyNumeric.num2int(rInitialCapacity.convertToInteger())  : DEFAULT_INITIAL_CAPACITY;
                 float loadFactor     = !rLoadFactor.isNil() ?       (float)RubyNumeric.num2dbl(rLoadFactor.convertToFloat())  : DEFAULT_LOAD_FACTOR;
                 int concurrencyLevel = !rConcurrencyLevel.isNil() ? RubyNumeric.num2int(rConcurrencyLevel.convertToInteger()) : DEFAULT_CONCURRENCY_LEVEL;
-                return new ComputableConcurrentHashMap<IRubyObject, IRubyObject>(initialCapacity, loadFactor, concurrencyLevel);
+                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor, concurrencyLevel);
             } else {
-                return new ComputableConcurrentHashMap<IRubyObject, IRubyObject>();
+                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
             }
         }
 
@@ -92,9 +93,9 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute_if_absent(final ThreadContext context, final IRubyObject key, final Block block) {
-            return map.computeIfAbsent(key, new ComputableConcurrentHashMap.MappingFunction<IRubyObject, IRubyObject>() {
+            return map.computeIfAbsent(key, new ConcurrentHashMapV8.Fun<IRubyObject, IRubyObject>() {
                 @Override
-                public IRubyObject map(IRubyObject key) {
+                public IRubyObject apply(IRubyObject key) {
                     return block.yieldSpecific(context);
                 }
             });
@@ -153,7 +154,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod(visibility = PRIVATE)
         public JRubyCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
-            this.map = new ComputableConcurrentHashMap<IRubyObject, IRubyObject>();
+            this.map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
             return this;
         }
     }
