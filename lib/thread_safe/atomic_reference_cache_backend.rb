@@ -361,12 +361,7 @@ module ThreadSafe
     def initialize(options = nil)
       super()
       @counter = Util::Adder.new
-
       initial_capacity  = options && options[:initial_capacity] || DEFAULT_CAPACITY
-      concurrency_level = options && options[:concurrency_level]
-
-      initial_capacity = concurrency_level if concurrency_level && concurrency_level > initial_capacity # Use at least as many bins
-
       self.size_control = (capacity = table_size_for(initial_capacity)) > MAX_CAPACITY ? MAX_CAPACITY : capacity
     end
 

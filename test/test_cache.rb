@@ -500,15 +500,6 @@ class TestCache < Test::Unit::TestCase
     assert_invalid_option(:load_factor, -1)
   end
 
-  def test_concurency_level_options_validation
-    assert_valid_option(:concurrency_level, nil)
-    assert_valid_option(:concurrency_level, 1)
-    assert_invalid_option(:concurrency_level, '')
-    assert_invalid_option(:concurrency_level, 1.0)
-    assert_invalid_option(:concurrency_level, 0)
-    assert_invalid_option(:concurrency_level, -1)
-  end
-
   def test_size
     assert_equal 0, @cache.size
     @cache[:a] = 1

@@ -38,7 +38,6 @@ public class JRubyCacheBackendLibrary implements Library {
         // Defaults used by the CHM
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
-        static final int DEFAULT_CONCURRENCY_LEVEL = 16;
 
         private ConcurrentHashMapV8<IRubyObject, IRubyObject> map;
 
@@ -61,13 +60,11 @@ public class JRubyCacheBackendLibrary implements Library {
         private ConcurrentHashMapV8<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
             Ruby runtime = context.getRuntime();
             if (!options.isNil() && options.respondsTo("[]")) {
-                IRubyObject rInitialCapacity  = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
-                IRubyObject rLoadFactor       = options.callMethod(context, "[]", runtime.newSymbol("load_factor"));
-                IRubyObject rConcurrencyLevel = options.callMethod(context, "[]", runtime.newSymbol("concurrency_level"));
-                int initialCapacity  = !rInitialCapacity.isNil() ?  RubyNumeric.num2int(rInitialCapacity.convertToInteger())  : DEFAULT_INITIAL_CAPACITY;
-                float loadFactor     = !rLoadFactor.isNil() ?       (float)RubyNumeric.num2dbl(rLoadFactor.convertToFloat())  : DEFAULT_LOAD_FACTOR;
-                int concurrencyLevel = !rConcurrencyLevel.isNil() ? RubyNumeric.num2int(rConcurrencyLevel.convertToInteger()) : DEFAULT_CONCURRENCY_LEVEL;
-                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor, concurrencyLevel);
+                IRubyObject rInitialCapacity = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
+                IRubyObject rLoadFactor      = options.callMethod(context, "[]", runtime.newSymbol("load_factor"));
+                int initialCapacity = !rInitialCapacity.isNil() ? RubyNumeric.num2int(rInitialCapacity.convertToInteger()) : DEFAULT_INITIAL_CAPACITY;
+                float loadFactor    = !rLoadFactor.isNil() ?      (float)RubyNumeric.num2dbl(rLoadFactor.convertToFloat()) : DEFAULT_LOAD_FACTOR;
+                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
             } else {
                 return new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
             }

@@ -121,9 +121,6 @@ module ThreadSafe
       if (load_factor = options[:load_factor]) && (!load_factor.kind_of?(Numeric) || load_factor <= 0 || load_factor > 1)
         raise ArgumentError, ":load_factor must be a number between 0 and 1"
       end
-      if (concurrency_level = options[:concurrency_level]) && (!concurrency_level.kind_of?(Fixnum) || concurrency_level < 1)
-        raise ArgumentError, ":concurrency_level must be a Fixnum greater or equal than 1"
-      end
     end
   end
 end
