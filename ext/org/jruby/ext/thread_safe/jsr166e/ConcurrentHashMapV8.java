@@ -4,6 +4,8 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
+// This is based on the 1.79 version.
+
 package org.jruby.ext.thread_safe.jsr166e;
 
 import org.jruby.RubyClass;
