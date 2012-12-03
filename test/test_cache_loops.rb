@@ -6,7 +6,6 @@ require File.join(File.dirname(__FILE__), "test_helper")
 Thread.abort_on_exception = true
 
 class TestCacheTorture < Test::Unit::TestCase
-
   THREAD_COUNT  = 40
   KEY_COUNT     = (((2**13) - 2) * 0.75).to_i # get close to the doubling cliff
   LOW_KEY_COUNT = (((2**8 ) - 2) * 0.75).to_i # get close to the doubling cliff
@@ -39,7 +38,8 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   def test_put_if_absent
-    do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options|
+    do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options, keys|
+      assert_all_key_mapping_exist(cache, keys)
       assert_equal(options[:key_count], sum(result))
       assert_equal(options[:key_count], cache.size)
     end
@@ -47,7 +47,8 @@ class TestCacheTorture < Test::Unit::TestCase
 
   def test_compute_if_absent
     code = 'cache.compute_if_absent(key) { acc += 1; key }'
-    do_thread_loop(:compute_if_absent, code) do |result, cache, options|
+    do_thread_loop(:compute_if_absent, code) do |result, cache, options, keys|
+      assert_all_key_mapping_exist(cache, keys)
       assert_equal(options[:key_count], sum(result))
       assert_equal(options[:key_count], cache.size)
     end
@@ -61,7 +62,8 @@ class TestCacheTorture < Test::Unit::TestCase
         acc += 1 unless cache.put_if_absent(key, key)
       end
     RUBY_EVAL
-    do_thread_loop(:compute_put_if_absent, code) do |result, cache, options|
+    do_thread_loop(:compute_put_if_absent, code) do |result, cache, options, keys|
+      assert_all_key_mapping_exist(cache, keys)
       assert_equal(options[:key_count], sum(result))
       assert_equal(options[:key_count], cache.size)
     end
@@ -97,8 +99,10 @@ class TestCacheTorture < Test::Unit::TestCase
       v = cache[key]
       acc += change if cache.replace_pair(key, v, v + change)
     RUBY_EVAL
-    do_thread_loop(:count_race, code, :loop_count => 5, :prelude => prelude, :cache_setup => ZERO_VALUE_CACHE_SETUP) do |result, cache, options|
-      assert_equal(sum(cache.values), sum(result))
+    do_thread_loop(:count_race, code, :loop_count => 5, :prelude => prelude, :cache_setup => ZERO_VALUE_CACHE_SETUP) do |result, cache, options, keys|
+      result_sum = sum(result)
+      assert_equal(sum(keys.map {|key| cache[key]}), result_sum)
+      assert_equal(sum(cache.values), result_sum)
       assert_equal(options[:key_count], cache.size)
     end
   end
@@ -113,7 +117,8 @@ class TestCacheTorture < Test::Unit::TestCase
         acc -= 1 if cache.delete_pair(key, key)
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options|
+    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+      assert_all_key_mapping_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
   end
@@ -127,7 +132,8 @@ class TestCacheTorture < Test::Unit::TestCase
         acc -= 1 if cache.delete(key)
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options|
+    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+      assert_all_key_mapping_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
   end
@@ -137,7 +143,12 @@ class TestCacheTorture < Test::Unit::TestCase
       v = cache[key]
       acc += 1 if cache.replace_pair(key, v, v + 1)
     RUBY_EVAL
-    do_thread_loop(:count_up, code, {:loop_count => 5, :cache_setup => ZERO_VALUE_CACHE_SETUP}.merge(opts)) do |result, cache, options|
+    do_thread_loop(:count_up, code, {:loop_count => 5, :cache_setup => ZERO_VALUE_CACHE_SETUP}.merge(opts)) do |result, cache, options, keys|
+      keys.each do |key|
+        unless value = cache[key]
+          assert value
+        end
+      end
       assert_equal(sum(cache.values), sum(result))
       assert_equal(options[:key_count], cache.size)
     end
@@ -148,7 +159,8 @@ class TestCacheTorture < Test::Unit::TestCase
       acc += 1 unless cache.put_if_absent(key, key)
       acc -= 1 if cache.delete_pair(key, key)
     RUBY_EVAL
-    do_thread_loop(:add_remove_to_zero, code, {:loop_count => 5}.merge(opts)) do |result, cache, options|
+    do_thread_loop(:add_remove_to_zero, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+      assert_all_key_mapping_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
   end
@@ -177,7 +189,7 @@ class TestCacheTorture < Test::Unit::TestCase
         setup_sync_and_start_loop(meth, cache, keys, barier, options[:loop_count])
       end
     end.map(&:value).tap{|x| puts(([{:meth => meth, :time => "#{Time.now - t}s", :loop_count => options[:loop_count], :key_count => keys.size}] + x).inspect)}
-    yield result, cache, options if block_given?
+    yield result, cache, options, keys if block_given?
   end
 
   def setup_sync_and_start_loop(meth, cache, keys, barier, loop_count)
@@ -265,5 +277,13 @@ class TestCacheTorture < Test::Unit::TestCase
 
   def sum(result)
     result.inject(0) {|acc, i| acc + i}
+  end
+
+  def assert_all_key_mapping_exist(cache, keys, all_must_exist = true)
+    keys.each do |key|
+      if (value = cache[key]) || all_must_exist
+        assert_equal key, value unless key == value # don't do a bazzilion assertions unless necessary
+      end
+    end
   end
 end
