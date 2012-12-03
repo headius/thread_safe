@@ -206,7 +206,9 @@ class TestCacheTorture < Test::Unit::TestCase
         end
         acc
       end unless method_defined?(:#{inner_meth_name}_multiple_keys)
+    RUBY_EVAL
 
+    self.class.class_eval <<-RUBY_EVAL, __FILE__, __LINE__ + 1
       def #{inner_meth_name}_single_key(cache, key, i, length, acc)
         #{prelude}
         target = i + length
@@ -216,7 +218,9 @@ class TestCacheTorture < Test::Unit::TestCase
         end
         acc
       end unless method_defined?(:#{inner_meth_name}_single_key)
+    RUBY_EVAL
 
+    self.class.class_eval <<-RUBY_EVAL, __FILE__, __LINE__ + 1
       def #{outer_meth_name}_multiple_keys(cache, keys, loop_count)
         total_length = keys.size
         acc = 0
@@ -233,7 +237,9 @@ class TestCacheTorture < Test::Unit::TestCase
         end
         acc
       end unless method_defined?(:#{outer_meth_name}_multiple_keys)
+    RUBY_EVAL
 
+    self.class.class_eval <<-RUBY_EVAL, __FILE__, __LINE__ + 1
       def #{outer_meth_name}_single_key(cache, key, loop_count)
         acc = 0
         i   = 0
