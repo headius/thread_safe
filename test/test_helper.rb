@@ -34,5 +34,25 @@ module ThreadSafe
         end
       end
     end
+
+    class HashCollisionKey
+      attr_reader :hash, :key
+      def initialize(key)
+        @key  = key
+        @hash = key.hash % 8
+      end
+
+      def eql?(other)
+        other.kind_of?(HashCollisionKey) && @key.eql?(other.key)
+      end
+
+      def even?
+        @key.even?
+      end
+
+      def <=>(other) # HashCollisionKeys should only be partially ordered (this tests CHVM8's TreeNodes)
+        (@key.odd? && other.key.odd?) ? 0 : @key <=> other.key
+      end
+    end
   end
 end
