@@ -193,20 +193,20 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   def run_thread_loop(meth, keys, options)
-    cache  = options[:cache_setup].call(options, keys)
-    barier = ThreadSafe::Test::Barier.new(options[:thread_count])
-    t      = Time.now
+    cache   = options[:cache_setup].call(options, keys)
+    barrier = ThreadSafe::Test::Barrier.new(options[:thread_count])
+    t       = Time.now
     result = (1..options[:thread_count]).map do
       Thread.new do
-        setup_sync_and_start_loop(meth, cache, keys, barier, options[:loop_count])
+        setup_sync_and_start_loop(meth, cache, keys, barrier, options[:loop_count])
       end
     end.map(&:value).tap{|x| puts(([{:meth => meth, :time => "#{Time.now - t}s", :loop_count => options[:loop_count], :key_count => keys.size}] + x).inspect)}
     yield result, cache, options, keys if block_given?
   end
 
-  def setup_sync_and_start_loop(meth, cache, keys, barier, loop_count)
+  def setup_sync_and_start_loop(meth, cache, keys, barrier, loop_count)
     my_keys = keys.shuffle
-    barier.await
+    barrier.await
     if my_keys.size == 1
       key = my_keys.first
       send("#{meth}_single_key", cache, key, loop_count)

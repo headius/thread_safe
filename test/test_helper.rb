@@ -23,7 +23,7 @@ module ThreadSafe
       end
     end
 
-    class Barier < Latch
+    class Barrier < Latch
       def await
         @mutex.synchronize do
           if @count.zero? # fall through
