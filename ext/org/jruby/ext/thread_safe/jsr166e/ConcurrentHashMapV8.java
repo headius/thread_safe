@@ -853,14 +853,13 @@ public class ConcurrentHashMapV8<K, V>
                         if (dir == 0) { // if still stuck, need to check both sides
                             TreeNode r = null, pl, pr;
                             // try to recurse on the right
-                            if ((pr = p.right) != null && h >= pr.hash && (r = getTreeNode(h, k, pr)) != null) {
+                            if ((pr = p.right) != null && h >= pr.hash && (r = getTreeNode(h, k, pr)) != null)
                                 return r;
                             // try to continue iterating on the left side
-                            } else if ((pl = p.left) != null && h <= pl.hash) {
+                            else if ((pl = p.left) != null && h <= pl.hash)
                                 dir = -1;
-                            } else { // no matching node found
+                            else // no matching node found
                                 return null;
-                            }
                         }
                     }
                 }
@@ -931,14 +930,12 @@ public class ConcurrentHashMapV8<K, V>
                             (dir = rubyCompare(k, pk)) == 0) {
                         dir = (c == pc) ? 0 : c.getName().compareTo(pc.getName());
                         if (dir == 0) { // if still stuck, need to check both sides
-                            TreeNode r = null, pl, pr;
+                            TreeNode r = null, pr;
                             // try to recurse on the right
-                            if ((pr = p.right) != null && h >= pr.hash && (r = getTreeNode(h, k, pr)) != null) {
+                            if ((pr = p.right) != null && h >= pr.hash && (r = getTreeNode(h, k, pr)) != null)
                                 return r;
-                            // try to continue iterating on the left side
-                            } else if ((pl = p.left) != null && h <= pl.hash) {
+                            else // continue descending down the left subtree
                                 dir = -1;
-                            }
                         }
                     }
                 }
