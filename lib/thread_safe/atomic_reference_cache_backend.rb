@@ -330,8 +330,6 @@ module ThreadSafe
       end
     end
 
-    # The class allows for +nil+ values to be stored, so a special +NULL+ token is required to indicate the "nil-ness".
-    NULL         = Object.new
     NOW_RESIZING = -1
 
     # shorthands

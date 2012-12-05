@@ -3,7 +3,10 @@ require 'thread_safe/version'
 module ThreadSafe
   autoload :Cache, 'thread_safe/cache'
   autoload :Util,  'thread_safe/util'
-  
+
+  # Various classes within allows for +nil+ values to be stored, so a special +NULL+ token is required to indicate the "nil-ness".
+  NULL = Object.new
+
   if defined?(JRUBY_VERSION)
     require 'jruby/synchronized'
 

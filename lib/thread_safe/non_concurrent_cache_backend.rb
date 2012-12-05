@@ -15,7 +15,7 @@ module ThreadSafe
     end
 
     def compute_if_absent(key)
-      if (stored_value = @backend[key]) || @backend.key?(key)
+      if NULL != (stored_value = @backend.fetch(key, NULL))
         stored_value
       else
         @backend[key] = yield
@@ -32,7 +32,7 @@ module ThreadSafe
     end
 
     def replace_if_exists(key, new_value)
-      if (stored_value = @backend[key]) || @backend.key?(key)
+      if NULL != (stored_value = @backend.fetch(key, NULL))
         @backend[key] = new_value
         stored_value
       end
@@ -92,7 +92,7 @@ module ThreadSafe
     end
 
     def pair?(key, expected_value)
-      ((stored_value = @backend[key]) || @backend.key?(key)) && expected_value.equal?(stored_value)
+      NULL != (stored_value = @backend.fetch(key, NULL)) && expected_value.equal?(stored_value)
     end
   end
 end
