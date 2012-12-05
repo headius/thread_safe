@@ -10,10 +10,14 @@ class TestCacheTorture < Test::Unit::TestCase
   KEY_COUNT     = (((2**13) - 2) * 0.75).to_i # get close to the doubling cliff
   LOW_KEY_COUNT = (((2**8 ) - 2) * 0.75).to_i # get close to the doubling cliff
 
-  ZERO_VALUE_CACHE_SETUP = lambda do |options, keys|
-    cache = ThreadSafe::Cache.new
-    keys.each {|key| cache[key] = 0}
+  INITIAL_VALUE_CACHE_SETUP = lambda do |options, keys|
+    cache         = ThreadSafe::Cache.new
+    initial_value = options[:initial_value] || 0
+    keys.each {|key| cache[key] = initial_value}
     cache
+  end
+  ZERO_VALUE_CACHE_SETUP = lambda do |options, keys|
+    INITIAL_VALUE_CACHE_SETUP.call(options.merge(:initial_value => 0), keys)
   end
 
   DEFAULTS = {
@@ -98,6 +102,20 @@ class TestCacheTorture < Test::Unit::TestCase
       assert_equal(sum(keys.map {|key| cache[key]}), result_sum)
       assert_equal(sum(cache.values), result_sum)
       assert_equal(options[:key_count], cache.size)
+    end
+  end
+
+  def test_get_and_set_new
+    code = 'acc += 1 unless cache.get_and_set(key, key)'
+    do_thread_loop(:get_and_set_new, code) do |result, cache, options, keys|
+      assert_standard_accumulator_test_result(result, cache, options, keys)
+    end
+  end
+
+  def test_get_and_set_existing
+    code = 'acc += 1 if cache.get_and_set(key, key) == -1'
+    do_thread_loop(:get_and_set_existing, code, :cache_setup => INITIAL_VALUE_CACHE_SETUP, :initial_value => -1) do |result, cache, options, keys|
+      assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
 
