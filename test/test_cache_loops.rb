@@ -39,18 +39,14 @@ class TestCacheTorture < Test::Unit::TestCase
 
   def test_put_if_absent
     do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options, keys|
-      assert_all_key_mapping_exist(cache, keys)
-      assert_equal(options[:key_count], sum(result))
-      assert_equal(options[:key_count], cache.size)
+      assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
 
   def test_compute_if_absent
     code = 'cache.compute_if_absent(key) { acc += 1; key }'
     do_thread_loop(:compute_if_absent, code) do |result, cache, options, keys|
-      assert_all_key_mapping_exist(cache, keys)
-      assert_equal(options[:key_count], sum(result))
-      assert_equal(options[:key_count], cache.size)
+      assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
 
@@ -63,9 +59,7 @@ class TestCacheTorture < Test::Unit::TestCase
       end
     RUBY_EVAL
     do_thread_loop(:compute_put_if_absent, code) do |result, cache, options, keys|
-      assert_all_key_mapping_exist(cache, keys)
-      assert_equal(options[:key_count], sum(result))
-      assert_equal(options[:key_count], cache.size)
+      assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
 
@@ -277,6 +271,12 @@ class TestCacheTorture < Test::Unit::TestCase
 
   def sum(result)
     result.inject(0) {|acc, i| acc + i}
+  end
+
+  def assert_standard_accumulator_test_result(result, cache, options, keys)
+    assert_all_key_mapping_exist(cache, keys)
+    assert_equal(options[:key_count], sum(result))
+    assert_equal(options[:key_count], cache.size)
   end
 
   def assert_all_key_mapping_exist(cache, keys, all_must_exist = true)
