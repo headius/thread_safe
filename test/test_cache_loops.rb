@@ -17,11 +17,11 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   DEFAULTS = {
-    :key_count => KEY_COUNT,
+    :key_count    => KEY_COUNT,
     :thread_count => THREAD_COUNT,
-    :loop_count => 1,
-    :prelude => '',
-    :cache_setup => lambda {|options, keys| ThreadSafe::Cache.new}
+    :loop_count   => 1,
+    :prelude      => '',
+    :cache_setup  => lambda {|options, keys| ThreadSafe::Cache.new}
   }
 
   LOW_KEY_COUNT_OPTIONS    = {:loop_count => 150,    :key_count => LOW_KEY_COUNT}
