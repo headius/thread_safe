@@ -112,7 +112,7 @@ class TestCacheTorture < Test::Unit::TestCase
       end
     RUBY_EVAL
     do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
-      assert_all_key_mapping_exist(cache, keys, false)
+      assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
   end
@@ -127,7 +127,7 @@ class TestCacheTorture < Test::Unit::TestCase
       end
     RUBY_EVAL
     do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
-      assert_all_key_mapping_exist(cache, keys, false)
+      assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
   end
@@ -154,7 +154,7 @@ class TestCacheTorture < Test::Unit::TestCase
       acc -= 1 if cache.delete_pair(key, key)
     RUBY_EVAL
     do_thread_loop(:add_remove_to_zero, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
-      assert_all_key_mapping_exist(cache, keys, false)
+      assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
   end
@@ -274,12 +274,12 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   def assert_standard_accumulator_test_result(result, cache, options, keys)
-    assert_all_key_mapping_exist(cache, keys)
+    assert_all_key_mappings_exist(cache, keys)
     assert_equal(options[:key_count], sum(result))
     assert_equal(options[:key_count], cache.size)
   end
 
-  def assert_all_key_mapping_exist(cache, keys, all_must_exist = true)
+  def assert_all_key_mappings_exist(cache, keys, all_must_exist = true)
     keys.each do |key|
       if (value = cache[key]) || all_must_exist
         assert_equal key, value unless key == value # don't do a bazzilion assertions unless necessary
