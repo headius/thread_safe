@@ -116,7 +116,8 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject get_and_set(IRubyObject key, IRubyObject value) {
-            return map.put(key, value);
+            IRubyObject result = map.put(key, value);
+            return result == null ? getRuntime().getNil() : result;
         }
 
         @JRubyMethod
