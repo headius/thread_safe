@@ -196,6 +196,7 @@ class TestCache < Test::Unit::TestCase
   def test_replace_pair
     assert_no_size_change do
       assert_equal false, @cache.replace_pair(:a, 1, 2)
+      assert_equal false, @cache.replace_pair(:a, nil, nil)
       assert_equal false, @cache.key?(:a)
     end
     assert_size_change 1 do
@@ -287,6 +288,7 @@ class TestCache < Test::Unit::TestCase
   def test_delete_pair
     assert_no_size_change do
       assert_equal false, @cache.delete_pair(:a, 2)
+      assert_equal false, @cache.delete_pair(:a, nil)
     end
     @cache[:a] = 1
     assert_no_size_change do
