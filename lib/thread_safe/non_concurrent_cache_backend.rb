@@ -77,6 +77,10 @@ module ThreadSafe
       @backend.size
     end
 
+    def get_or_default(key, default_value)
+      @backend.fetch(key, default_value)
+    end
+
     alias_method :_get, :[]
     alias_method :_set, :[]=
     private :_get, :_set

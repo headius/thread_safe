@@ -326,30 +326,33 @@ class TestCache < Test::Unit::TestCase
 
   def test_fetch
     assert_no_size_change do
-      assert_equal nil,   @cache.fetch(:a)
-      assert_equal false, @cache.key?(:a)
+      assert_equal 1,      @cache.fetch(:a, 1)
+      assert_equal(1,     (@cache.fetch(:a) {1}))
+      assert_equal false,  @cache.key?(:a)
+      assert_equal nil,    @cache[:a]
     end
 
-    assert_size_change 1 do
-      assert_equal(1, (@cache.fetch(:a) {1}))
-    end
-
+    @cache[:a] = 1
     assert_no_size_change do
-      assert_equal true, @cache.key?(:a)
-      assert_equal 1,    @cache[:a]
-      assert_equal 1,    @cache.fetch(:a)
-
       assert_equal(1, (@cache.fetch(:a) {flunk}))
+    end
+
+    assert_raise(ThreadSafe::Cache::KEY_ERROR) do
+      @cache.fetch(:b)
     end
   end
 
   def test_falsy_fetch
     assert_equal false, @cache.key?(:a)
 
-    assert_size_change 1 do
-      assert_equal(nil, (@cache.fetch(:a) {}))
+    assert_no_size_change do
+      assert_equal(nil,    @cache.fetch(:a, nil))
+      assert_equal(false,  @cache.fetch(:a, false))
+      assert_equal(nil,   (@cache.fetch(:a) {}))
+      assert_equal(false, (@cache.fetch(:a) {false}))
     end
 
+    @cache[:a] = nil
     assert_no_size_change do
       assert_equal true, @cache.key?(:a)
       assert_equal(nil, (@cache.fetch(:a) {flunk}))
@@ -512,6 +515,24 @@ class TestCache < Test::Unit::TestCase
     assert_equal 1, @cache.size
     @cache.delete(:b)
     assert_equal 0, @cache.size
+  end
+
+  def test_get_or_default
+    assert_equal 1,     @cache.get_or_default(:a, 1)
+    assert_equal nil,   @cache.get_or_default(:a, nil)
+    assert_equal false, @cache.get_or_default(:a, false)
+    assert_equal false, @cache.key?(:a)
+
+    @cache[:a] = 1
+    assert_equal 1, @cache.get_or_default(:a, 2)
+  end
+
+  def test_get_or_default_with_default_proc
+    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 1}
+    assert_equal 1,     @cache.get_or_default(:a, 1)
+    assert_equal nil,   @cache.get_or_default(:a, nil)
+    assert_equal false, @cache.get_or_default(:a, false)
+    assert_equal false, @cache.key?(:a)
   end
 
   def test_dup_clone

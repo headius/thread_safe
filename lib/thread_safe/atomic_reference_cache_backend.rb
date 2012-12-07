@@ -363,12 +363,30 @@ module ThreadSafe
       self.size_control = (capacity = table_size_for(initial_capacity)) > MAX_CAPACITY ? MAX_CAPACITY : capacity
     end
 
+    def get_or_default(key, else_value = nil)
+      hash          = key_hash(key)
+      current_table = table
+      while current_table
+        node = current_table.volatile_get_by_hash(hash)
+        current_table =
+          while node
+            if (node_hash = node.hash) == MOVED
+              break node.key
+            elsif (node_hash & HASH_BITS) == hash && node.key?(key) && NULL != (value = node.value)
+              return value
+            end
+            node = node.next
+          end
+      end
+      else_value
+    end
+
     def [](key)
-      internal_get(key)
+      get_or_default(key)
     end
 
     def key?(key)
-      internal_get(key, NULL) != NULL
+      get_or_default(key, NULL) != NULL
     end
 
     def []=(key, value)
@@ -568,24 +586,6 @@ module ThreadSafe
 
         return true, old_value
       end
-    end
-
-    def internal_get(key, else_value = nil)
-      hash          = key_hash(key)
-      current_table = table
-      while current_table
-        node = current_table.volatile_get_by_hash(hash)
-        current_table =
-          while node
-            if (node_hash = node.hash) == MOVED
-              break node.key
-            elsif (node_hash & HASH_BITS) == hash && node.key?(key) && NULL != (value = node.value)
-              return value
-            end
-            node = node.next
-          end
-      end
-      else_value
     end
 
     def find_value_in_node_list(node, key, hash, pure_hash)

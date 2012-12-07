@@ -150,6 +150,11 @@ public class JRubyCacheBackendLibrary implements Library {
             return context.getRuntime().newFixnum(map.size());
         }
 
+        @JRubyMethod
+        public IRubyObject get_or_default(IRubyObject key, IRubyObject defaultValue) {
+            return map.getValueOrDefault(key, defaultValue);
+        }
+
         @JRubyMethod(visibility = PRIVATE)
         public JRubyCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
             this.map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();

@@ -48,6 +48,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def get_or_default(key, default_value)
+      synchronize { super }
+    end
+
     private
     def dupped_backend
       synchronize { super }
