@@ -183,6 +183,14 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_collision_resistance
+    keys = (0..100).map {|i| ThreadSafe::Test::HashCollisionKey.new(i, 1)}
+    keys.each {|k| @cache[k] = k.key}
+    keys.each do |k|
+      assert_equal k.key, @cache[k]
+    end
+  end
+
   def test_replace_pair
     with_or_without_default_proc do
       assert_no_size_change do
