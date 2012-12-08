@@ -35,63 +35,53 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_put_if_absent
-    assert_size_change 1 do
-      assert_equal nil, @cache.put_if_absent(:a, 1)
-      assert_equal 1,   @cache.put_if_absent(:a, 1)
-      assert_equal 1,   @cache.put_if_absent(:a, 2)
-      assert_equal 1,   @cache[:a]
-    end
-  end
-
-  def test_put_if_absent_with_default_proc
-    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
-    assert_size_change 1 do
-      assert_equal nil, @cache.put_if_absent(:a, 1)
-      assert_equal 1,   @cache.put_if_absent(:a, 1)
-      assert_equal 1,   @cache.put_if_absent(:a, 2)
-      assert_equal 1,   @cache[:a]
+    with_or_without_default_proc do
+      assert_size_change 1 do
+        assert_equal nil, @cache.put_if_absent(:a, 1)
+        assert_equal 1,   @cache.put_if_absent(:a, 1)
+        assert_equal 1,   @cache.put_if_absent(:a, 2)
+        assert_equal 1,   @cache[:a]
+      end
     end
   end
 
   def test_compute_if_absent
-    assert_size_change 2 do
-      assert_equal(1,   (@cache.compute_if_absent(:a) {1}))
-      assert_equal(1,   (@cache.compute_if_absent(:a) {2}))
-      assert_equal 1,    @cache[:a]
-      @cache[:b] = nil
-      assert_equal(nil, (@cache.compute_if_absent(:b) {1}))
-    end
-  end
-
-  def test_compute_if_absent_with_default_proc
-    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 1}
-    assert_size_change 2 do
-      assert_equal(2,   (@cache.compute_if_absent(:a) {2}))
-      assert_equal 2,    @cache[:a]
-      assert_equal(nil, (@cache.compute_if_absent(:b) {}))
-      assert_equal nil,  @cache[:b]
-      assert_equal true, @cache.key?(:b)
+    with_or_without_default_proc do
+      assert_size_change 3 do
+        assert_equal(1,   (@cache.compute_if_absent(:a) {1}))
+        assert_equal(1,   (@cache.compute_if_absent(:a) {2}))
+        assert_equal 1,    @cache[:a]
+        @cache[:b] = nil
+        assert_equal(nil, (@cache.compute_if_absent(:b) {1}))
+        assert_equal(nil, (@cache.compute_if_absent(:c) {}))
+        assert_equal nil,  @cache[:c]
+        assert_equal true, @cache.key?(:c)
+      end
     end
   end
 
   def test_compute_if_absent_with_return
-    returning_lambda = lambda do
-      @cache.compute_if_absent(:a) { return 1 }
-    end
+    with_or_without_default_proc do
+      returning_lambda = lambda do
+        @cache.compute_if_absent(:a) { return 1 }
+      end
 
-    assert_no_size_change do
-      assert_equal(1, returning_lambda.call)
-      assert_equal false, @cache.key?(:a)
+      assert_no_size_change do
+        assert_equal(1, returning_lambda.call)
+        assert_equal false, @cache.key?(:a)
+      end
     end
   end
 
   def test_compute_if_absent_exception
     exception_klass = Class.new(Exception)
-    assert_no_size_change do
-      assert_raise(exception_klass) do
-        @cache.compute_if_absent(:a) { raise exception_klass, '' }
+    with_or_without_default_proc do
+      assert_no_size_change do
+        assert_raise(exception_klass) do
+          @cache.compute_if_absent(:a) { raise exception_klass, '' }
+        end
+        assert_equal false, @cache.key?(:a)
       end
-      assert_equal false, @cache.key?(:a)
     end
   end
 
@@ -194,116 +184,113 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_replace_pair
-    assert_no_size_change do
-      assert_equal false, @cache.replace_pair(:a, 1, 2)
-      assert_equal false, @cache.replace_pair(:a, nil, nil)
-      assert_equal false, @cache.key?(:a)
-    end
-    assert_size_change 1 do
-      @cache[:a] = 1
-      assert_equal true,  @cache.replace_pair(:a, 1, 2)
-      assert_equal false, @cache.replace_pair(:a, 1, 2)
-      assert_equal 2,     @cache[:a]
-      assert_equal true,  @cache.replace_pair(:a, 2, 2)
-      assert_equal 2,     @cache[:a]
-      assert_equal true,  @cache.replace_pair(:a, 2, nil)
-      assert_equal false, @cache.replace_pair(:a, 2, nil)
-      assert_equal nil,   @cache[:a]
-      assert_equal true,  @cache.key?(:a)
-      assert_equal true,  @cache.replace_pair(:a, nil, nil)
-      assert_equal true,  @cache.key?(:a)
-      assert_equal true,  @cache.replace_pair(:a, nil, 1)
-      assert_equal 1,     @cache[:a]
+    with_or_without_default_proc do
+      assert_no_size_change do
+        assert_equal false, @cache.replace_pair(:a, 1, 2)
+        assert_equal false, @cache.replace_pair(:a, nil, nil)
+        assert_equal false, @cache.key?(:a)
+      end
+      assert_size_change 1 do
+        @cache[:a] = 1
+        assert_equal true,  @cache.replace_pair(:a, 1, 2)
+        assert_equal false, @cache.replace_pair(:a, 1, 2)
+        assert_equal 2,     @cache[:a]
+        assert_equal true,  @cache.replace_pair(:a, 2, 2)
+        assert_equal 2,     @cache[:a]
+        assert_equal true,  @cache.replace_pair(:a, 2, nil)
+        assert_equal false, @cache.replace_pair(:a, 2, nil)
+        assert_equal nil,   @cache[:a]
+        assert_equal true,  @cache.key?(:a)
+        assert_equal true,  @cache.replace_pair(:a, nil, nil)
+        assert_equal true,  @cache.key?(:a)
+        assert_equal true,  @cache.replace_pair(:a, nil, 1)
+        assert_equal 1,     @cache[:a]
+      end
     end
   end
 
   def test_replace_if_exists
-    assert_no_size_change do
-      assert_equal nil,   @cache.replace_if_exists(:a, 1)
-      assert_equal false, @cache.key?(:a)
-    end
-    assert_size_change 1 do
-      @cache[:a] = 1
-      assert_equal 1,     @cache.replace_if_exists(:a, 2)
-      assert_equal 2,     @cache[:a]
-      assert_equal 2,     @cache.replace_if_exists(:a, nil)
-      assert_equal nil,   @cache[:a]
-      assert_equal true,  @cache.key?(:a)
-      assert_equal nil,   @cache.replace_if_exists(:a, 1)
-      assert_equal 1,     @cache[:a]
-    end
-  end
-
-  def test_replace_if_exists_with_default_proc
-    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
-    assert_no_size_change do
-      assert_equal nil,   @cache.replace_if_exists(:a, 1)
-      assert_equal false, @cache.key?(:a)
+    with_or_without_default_proc do
+      assert_no_size_change do
+        assert_equal nil,   @cache.replace_if_exists(:a, 1)
+        assert_equal false, @cache.key?(:a)
+      end
+      assert_size_change 1 do
+        @cache[:a] = 1
+        assert_equal 1,     @cache.replace_if_exists(:a, 2)
+        assert_equal 2,     @cache[:a]
+        assert_equal 2,     @cache.replace_if_exists(:a, nil)
+        assert_equal nil,   @cache[:a]
+        assert_equal true,  @cache.key?(:a)
+        assert_equal nil,   @cache.replace_if_exists(:a, 1)
+        assert_equal 1,     @cache[:a]
+      end
     end
   end
 
   def test_get_and_set
-    assert_size_change 1 do
-      assert_equal nil,   @cache.get_and_set(:a, 1)
-      assert_equal true,  @cache.key?(:a)
-      assert_equal 1,     @cache[:a]
-      assert_equal 1,     @cache.get_and_set(:a, 2)
-      assert_equal 2,     @cache.get_and_set(:a, nil)
-      assert_equal nil,   @cache[:a]
-      assert_equal true,  @cache.key?(:a)
-      assert_equal nil,   @cache.get_and_set(:a, 1)
-      assert_equal 1,     @cache[:a]
-    end
-  end
-
-  def test_get_and_set_with_default_proc
-    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 2}
-    assert_size_change 1 do
-      assert_equal nil, @cache.get_and_set(:a, 1)
-      assert_equal 1,   @cache[:a]
+    with_or_without_default_proc do
+      assert_size_change 1 do
+        assert_equal nil,   @cache.get_and_set(:a, 1)
+        assert_equal true,  @cache.key?(:a)
+        assert_equal 1,     @cache[:a]
+        assert_equal 1,     @cache.get_and_set(:a, 2)
+        assert_equal 2,     @cache.get_and_set(:a, nil)
+        assert_equal nil,   @cache[:a]
+        assert_equal true,  @cache.key?(:a)
+        assert_equal nil,   @cache.get_and_set(:a, 1)
+        assert_equal 1,     @cache[:a]
+      end
     end
   end
 
   def test_key
-    assert_equal false, @cache.key?(:a)
-    @cache[:a] = 1
-    assert_equal true,  @cache.key?(:a)
+    with_or_without_default_proc do
+      assert_equal false, @cache.key?(:a)
+      @cache[:a] = 1
+      assert_equal true,  @cache.key?(:a)
+    end
   end
 
   def test_delete
-    assert_no_size_change do
-      assert_equal nil,   @cache.delete(:a)
-    end
-    @cache[:a] = 1
-    assert_size_change -1 do
-      assert_equal 1,     @cache.delete(:a)
-    end
-    assert_no_size_change do
-      assert_equal nil,   @cache[:a]
-      assert_equal false, @cache.key?(:a)
-      assert_equal nil,   @cache.delete(:a)
+    with_or_without_default_proc do |default_proc_set|
+      assert_no_size_change do
+        assert_equal nil,   @cache.delete(:a)
+      end
+      @cache[:a] = 1
+      assert_size_change -1 do
+        assert_equal 1,     @cache.delete(:a)
+      end
+      assert_no_size_change do
+        assert_equal nil, @cache[:a] unless default_proc_set
+
+        assert_equal false, @cache.key?(:a)
+        assert_equal nil,   @cache.delete(:a)
+      end
     end
   end
 
   def test_delete_pair
-    assert_no_size_change do
-      assert_equal false, @cache.delete_pair(:a, 2)
-      assert_equal false, @cache.delete_pair(:a, nil)
-    end
-    @cache[:a] = 1
-    assert_no_size_change do
-      assert_equal false, @cache.delete_pair(:a, 2)
-    end
-    assert_size_change -1 do
-      assert_equal 1,     @cache[:a]
-      assert_equal true,  @cache.delete_pair(:a, 1)
-      assert_equal false, @cache.delete_pair(:a, 1)
-      assert_equal false, @cache.key?(:a)
+    with_or_without_default_proc do
+      assert_no_size_change do
+        assert_equal false, @cache.delete_pair(:a, 2)
+        assert_equal false, @cache.delete_pair(:a, nil)
+      end
+      @cache[:a] = 1
+      assert_no_size_change do
+        assert_equal false, @cache.delete_pair(:a, 2)
+      end
+      assert_size_change -1 do
+        assert_equal 1,     @cache[:a]
+        assert_equal true,  @cache.delete_pair(:a, 1)
+        assert_equal false, @cache.delete_pair(:a, 1)
+        assert_equal false, @cache.key?(:a)
+      end
     end
   end
 
   def test_default_proc
-    @cache = ThreadSafe::Cache.new {|h,k| h[k] = 1}
+    @cache = cache_with_default_proc(1)
     assert_no_size_change do
       assert_equal false, @cache.key?(:a)
     end
@@ -314,7 +301,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_falsy_default_proc
-    @cache = ThreadSafe::Cache.new {|h,k| h[k] = nil}
+    @cache = cache_with_default_proc(nil)
     assert_no_size_change do
       assert_equal false, @cache.key?(:a)
     end
@@ -325,48 +312,55 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_fetch
-    assert_no_size_change do
-      assert_equal 1,      @cache.fetch(:a, 1)
-      assert_equal(1,     (@cache.fetch(:a) {1}))
-      assert_equal false,  @cache.key?(:a)
-      assert_equal nil,    @cache[:a]
-    end
+    with_or_without_default_proc do |default_proc_set|
+      assert_no_size_change do
+        assert_equal 1,      @cache.fetch(:a, 1)
+        assert_equal(1,     (@cache.fetch(:a) {1}))
+        assert_equal false,  @cache.key?(:a)
 
-    @cache[:a] = 1
-    assert_no_size_change do
-      assert_equal(1, (@cache.fetch(:a) {flunk}))
-    end
+        assert_equal nil, @cache[:a] unless default_proc_set
+      end
 
-    assert_raise(ThreadSafe::Cache::KEY_ERROR) do
-      @cache.fetch(:b)
+      @cache[:a] = 1
+      assert_no_size_change do
+        assert_equal(1, (@cache.fetch(:a) {flunk}))
+      end
+
+      assert_raise(ThreadSafe::Cache::KEY_ERROR) do
+        @cache.fetch(:b)
+      end
     end
   end
 
   def test_falsy_fetch
-    assert_equal false, @cache.key?(:a)
+    with_or_without_default_proc do
+      assert_equal false, @cache.key?(:a)
 
-    assert_no_size_change do
-      assert_equal(nil,    @cache.fetch(:a, nil))
-      assert_equal(false,  @cache.fetch(:a, false))
-      assert_equal(nil,   (@cache.fetch(:a) {}))
-      assert_equal(false, (@cache.fetch(:a) {false}))
-    end
+      assert_no_size_change do
+        assert_equal(nil,    @cache.fetch(:a, nil))
+        assert_equal(false,  @cache.fetch(:a, false))
+        assert_equal(nil,   (@cache.fetch(:a) {}))
+        assert_equal(false, (@cache.fetch(:a) {false}))
+      end
 
-    @cache[:a] = nil
-    assert_no_size_change do
-      assert_equal true, @cache.key?(:a)
-      assert_equal(nil, (@cache.fetch(:a) {flunk}))
+      @cache[:a] = nil
+      assert_no_size_change do
+        assert_equal true, @cache.key?(:a)
+        assert_equal(nil, (@cache.fetch(:a) {flunk}))
+      end
     end
   end
 
   def test_fetch_with_return
-    r = lambda do
-      @cache.fetch(:a) { return 10 }
-    end.call
+    with_or_without_default_proc do
+      r = lambda do
+        @cache.fetch(:a) { return 10 }
+      end.call
 
-    assert_no_size_change do
-      assert_equal 10,    r
-      assert_equal false, @cache.key?(:a)
+      assert_no_size_change do
+        assert_equal 10,    r
+        assert_equal false, @cache.key?(:a)
+      end
     end
   end
 
@@ -518,26 +512,20 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_get_or_default
-    assert_equal 1,     @cache.get_or_default(:a, 1)
-    assert_equal nil,   @cache.get_or_default(:a, nil)
-    assert_equal false, @cache.get_or_default(:a, false)
-    assert_equal false, @cache.key?(:a)
+    with_or_without_default_proc do
+      assert_equal 1,     @cache.get_or_default(:a, 1)
+      assert_equal nil,   @cache.get_or_default(:a, nil)
+      assert_equal false, @cache.get_or_default(:a, false)
+      assert_equal false, @cache.key?(:a)
 
-    @cache[:a] = 1
-    assert_equal 1, @cache.get_or_default(:a, 2)
-  end
-
-  def test_get_or_default_with_default_proc
-    @cache = ThreadSafe::Cache.new {|h, k| h[k] = 1}
-    assert_equal 1,     @cache.get_or_default(:a, 1)
-    assert_equal nil,   @cache.get_or_default(:a, nil)
-    assert_equal false, @cache.get_or_default(:a, false)
-    assert_equal false, @cache.key?(:a)
+      @cache[:a] = 1
+      assert_equal 1, @cache.get_or_default(:a, 2)
+    end
   end
 
   def test_dup_clone
     [:dup, :clone].each do |meth|
-      cache = ThreadSafe::Cache.new {|h, k| h[k] = :default_value}
+      cache = cache_with_default_proc(:default_value)
       cache[:a] = 1
       dupped = cache.send(meth)
       assert_equal 1, dupped[:a]
@@ -593,6 +581,16 @@ class TestCache < Test::Unit::TestCase
   end
 
   private
+  def with_or_without_default_proc
+    yield false
+    @cache = ThreadSafe::Cache.new {|h, k| h[k] = :default_value}
+    yield true
+  end
+
+  def cache_with_default_proc(default_value = 1)
+    ThreadSafe::Cache.new {|cache, k| cache[k] = default_value}
+  end
+
   def assert_valid_option(option_name, value)
     assert_valid_options(option_name => value)
   end
