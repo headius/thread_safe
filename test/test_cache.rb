@@ -204,8 +204,9 @@ class TestCache < Test::Unit::TestCase
         assert_equal false, @cache.replace_pair(:a, nil, nil)
         assert_equal false, @cache.key?(:a)
       end
-      assert_size_change 1 do
-        @cache[:a] = 1
+
+      @cache[:a] = 1
+      assert_no_size_change do
         assert_equal true,  @cache.replace_pair(:a, 1, 2)
         assert_equal false, @cache.replace_pair(:a, 1, 2)
         assert_equal 2,     @cache[:a]
@@ -229,8 +230,9 @@ class TestCache < Test::Unit::TestCase
         assert_equal nil,   @cache.replace_if_exists(:a, 1)
         assert_equal false, @cache.key?(:a)
       end
-      assert_size_change 1 do
-        @cache[:a] = 1
+
+      @cache[:a] = 1
+      assert_no_size_change do
         assert_equal 1,     @cache.replace_if_exists(:a, 2)
         assert_equal 2,     @cache[:a]
         assert_equal 2,     @cache.replace_if_exists(:a, nil)
