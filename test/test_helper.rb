@@ -50,16 +50,24 @@ module ThreadSafe
         @key.even?
       end
 
-      def <=>(other) # HashCollisionKeys should only be partially ordered (this tests CHVM8's TreeNodes)
-        (@key.odd? && other.key.odd?) ? 0 : @key <=> other.key
+      def <=>(other)
+        @key <=> other.key
       end
     end
 
-    class HashCollisionKey2 < HashCollisionKey # having 2 separate HCK classes helps for a more thorough CHMV8 testing
+    # having 4 separate HCK classes helps for a more thorough CHMV8 testing
+    class HashCollisionKey2 < HashCollisionKey; end
+    class HashCollisionKeyNoCompare < HashCollisionKey
+      def <=>(other)
+        0
+      end
     end
+    class HashCollisionKey4 < HashCollisionKeyNoCompare; end
+
+    HASH_COLLISION_CLASSES = [HashCollisionKey, HashCollisionKey2, HashCollisionKeyNoCompare, HashCollisionKey4]
 
     def self.HashCollisionKey(key)
-      (rand(2) == 0 ? HashCollisionKey : HashCollisionKey2).new(key)
+      HASH_COLLISION_CLASSES[rand(4)].new(key)
     end
   end
 end
