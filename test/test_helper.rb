@@ -37,7 +37,7 @@ module ThreadSafe
 
     class HashCollisionKey
       attr_reader :hash, :key
-      def initialize(key, hash = key.hash % 8)
+      def initialize(key, hash = key.hash % 3)
         @key  = key
         @hash = hash
       end
