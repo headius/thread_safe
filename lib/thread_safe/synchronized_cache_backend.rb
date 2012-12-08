@@ -32,6 +32,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def value?(value)
+      synchronize { super }
+    end
+
     def delete(key)
       synchronize { super }
     end

@@ -266,6 +266,14 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_value
+    with_or_without_default_proc do
+      assert_equal false, @cache.value?(1)
+      @cache[:a] = 1
+      assert_equal true,  @cache.value?(1)
+    end
+  end
+
   def test_delete
     with_or_without_default_proc do |default_proc_set|
       assert_no_size_change do

@@ -62,6 +62,13 @@ module ThreadSafe
       computed ? nil : result
     end unless method_defined?(:put_if_absent)
 
+    def value?(value)
+      each_value do |v|
+        return true if value.equal?(v)
+      end
+      false
+    end unless method_defined?(:value?)
+
     def keys
       arr = []
       each_pair {|k, v| arr << k}
