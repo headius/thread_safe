@@ -184,11 +184,17 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_collision_resistance
-    keys = (0..100).map {|i| ThreadSafe::Test::HashCollisionKey.new(i, 1)}
+    keys = (0..1000).map {|i| ThreadSafe::Test::HashCollisionKey.new(i, 1)}
     keys.each {|k| @cache[k] = k.key}
-    keys.each do |k|
-      assert_equal k.key, @cache[k]
+    10.times do |i|
+      size = keys.size
+      while i < size
+        k = keys[i]
+        assert(k.key == @cache.delete(k) && !@cache.key?(k) && (@cache[k] = k.key; @cache[k] == k.key))
+        i += 10
+      end
     end
+    assert(keys.all? {|k| @cache[k] == k.key})
   end
 
   def test_replace_pair
