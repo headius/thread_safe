@@ -330,14 +330,13 @@ module ThreadSafe
       end
     end
 
-    NOW_RESIZING = -1
-
     # shorthands
     MOVED     = Node::MOVED
     LOCKED    = Node::LOCKED
     WAITING   = Node::WAITING
     HASH_BITS = Node::HASH_BITS
 
+    NOW_RESIZING     = -1
     DEFAULT_CAPACITY = 16
     MAX_CAPACITY     = Util::MAX_INT
 
