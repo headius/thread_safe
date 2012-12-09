@@ -61,28 +61,11 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_compute_if_absent_with_return
-    with_or_without_default_proc do
-      returning_lambda = lambda do
-        @cache.compute_if_absent(:a) { return 1 }
-      end
-
-      assert_no_size_change do
-        assert_equal(1, returning_lambda.call)
-        assert_equal false, @cache.key?(:a)
-      end
-    end
+    with_or_without_default_proc { assert_handles_return_lambda(:compute_if_absent, :a) }
   end
 
   def test_compute_if_absent_exception
-    exception_klass = Class.new(Exception)
-    with_or_without_default_proc do
-      assert_no_size_change do
-        assert_raise(exception_klass) do
-          @cache.compute_if_absent(:a) { raise exception_klass, '' }
-        end
-        assert_equal false, @cache.key?(:a)
-      end
-    end
+    with_or_without_default_proc { assert_handles_exception(:compute_if_absent, :a) }
   end
 
   def test_compute_if_absent_atomicity
@@ -168,6 +151,20 @@ class TestCache < Test::Unit::TestCase
         assert_equal(nil,   @cache.compute_if_present(:a) {1})
         assert_equal(false, @cache.key?(:a))
       end
+    end
+  end
+
+  def test_compute_if_present_with_return
+    with_or_without_default_proc do
+      @cache[:a] = 1
+      assert_handles_return_lambda(:compute_if_present, :a)
+    end
+  end
+
+  def test_compute_if_present_exception
+    with_or_without_default_proc do
+      @cache[:a] = 1
+      assert_handles_exception(:compute_if_present, :a)
     end
   end
 
@@ -676,5 +673,34 @@ class TestCache < Test::Unit::TestCase
 
   def assert_no_size_change(cache = @cache, &block)
     assert_size_change(0, cache, &block)
+  end
+
+  def assert_handles_return_lambda(method, key)
+    before_had_key   = @cache.key?(key)
+    before_had_value = before_had_key ? @cache[key] : nil
+
+    returning_lambda = lambda do
+      @cache.send(method, key) { return :direct_return }
+    end
+
+    assert_no_size_change do
+      assert_equal(:direct_return,   returning_lambda.call)
+      assert_equal before_had_key,   @cache.key?(key)
+      assert_equal before_had_value, @cache[key] if before_had_value
+    end
+  end
+
+  class TestException < Exception; end
+  def assert_handles_exception(method, key)
+    before_had_key   = @cache.key?(key)
+    before_had_value = before_had_key ? @cache[key] : nil
+
+    assert_no_size_change do
+      assert_raise(TestException) do
+        @cache.send(method, key) { raise TestException, '' }
+      end
+      assert_equal before_had_key,   @cache.key?(key)
+      assert_equal before_had_value, @cache[key] if before_had_value
+    end
   end
 end
