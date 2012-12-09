@@ -16,7 +16,7 @@ module ThreadSafe
     end
 
     def compute_if_absent(key)
-      if stored_value = _get(key)
+      if stored_value = _get(key) # fast non-blocking path for the most likely case
         stored_value
       else
         WRITE_LOCK.synchronize { super }
