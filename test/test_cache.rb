@@ -134,6 +134,43 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_compute_if_present
+    with_or_without_default_proc do
+      assert_no_size_change do
+        assert_equal(nil,   @cache.compute_if_present(:a) {})
+        assert_equal(nil,   @cache.compute_if_present(:a) {1})
+        assert_equal(nil,   @cache.compute_if_present(:a) {flunk})
+        assert_equal false, @cache.key?(:a)
+      end
+
+      @cache[:a] = 1
+      assert_no_size_change do
+        assert_equal(1,     @cache.compute_if_present(:a) {1})
+        assert_equal(1,     @cache[:a])
+        assert_equal(2,     @cache.compute_if_present(:a) {2})
+        assert_equal(2,     @cache[:a])
+        assert_equal(false, @cache.compute_if_present(:a) {false})
+        assert_equal(false, @cache[:a])
+
+        @cache[:a] = 1
+        yielded    = false
+        @cache.compute_if_present(:a) do |old_value|
+          yielded = true
+          assert_equal 1, old_value
+          2
+        end
+        assert yielded
+      end
+
+      assert_size_change -1 do
+        assert_equal(nil,   @cache.compute_if_present(:a) {})
+        assert_equal(false, @cache.key?(:a))
+        assert_equal(nil,   @cache.compute_if_present(:a) {1})
+        assert_equal(false, @cache.key?(:a))
+      end
+    end
+  end
+
   def test_updates_dont_block_reads
     getters_count = 20
     key_klass     = ThreadSafe::Test::HashCollisionKey

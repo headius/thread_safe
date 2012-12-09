@@ -38,6 +38,17 @@ module ThreadSafe
       end
     end
 
+    def compute_if_present(key)
+      if NULL != (stored_value = @backend.fetch(key, NULL))
+        if (new_value = yield(stored_value)).nil?
+          @backend.delete(key)
+          nil
+        else
+          @backend[key] = new_value
+        end
+      end
+    end
+
     def get_and_set(key, value)
       stored_value = @backend[key]
       @backend[key] = value

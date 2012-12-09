@@ -67,6 +67,12 @@ class TestCacheTorture < Test::Unit::TestCase
     end
   end
 
+  def test_compute_if_absent_and_present
+    compute_if_absent_and_present
+    compute_if_absent_and_present(LOW_KEY_COUNT_OPTIONS)
+    compute_if_absent_and_present(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
   def test_add_remove_to_zero
     add_remove_to_zero
     add_remove_to_zero(LOW_KEY_COUNT_OPTIONS)
@@ -77,6 +83,12 @@ class TestCacheTorture < Test::Unit::TestCase
     add_remove
     add_remove(LOW_KEY_COUNT_OPTIONS)
     add_remove(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
+  def test_add_remove_via_compute
+    add_remove_via_compute
+    add_remove_via_compute(LOW_KEY_COUNT_OPTIONS)
+    add_remove_via_compute(SINGLE_KEY_COUNT_OPTIONS)
   end
 
   def test_add_remove_indiscriminate
@@ -120,6 +132,29 @@ class TestCacheTorture < Test::Unit::TestCase
   end
 
   private
+  def compute_if_absent_and_present(opts = {})
+    prelude = 'on_present = rand(2) == 1'
+    code = <<-RUBY_EVAL
+      if on_present
+        cache.compute_if_present(key) {|old_value| acc += 1; old_value + 1}
+      else
+        cache.compute_if_absent(key)  { acc += 1; 1 }
+      end
+    RUBY_EVAL
+    do_thread_loop(:compute_if_absent_and_present, code, {:loop_count => 5, :prelude => prelude}) do |result, cache, options, keys|
+      stored_sum       = 0
+      stored_key_count = 0
+      keys.each do |k|
+        if value = cache[k]
+          stored_sum += value
+          stored_key_count += 1
+        end
+      end
+      assert_equal(stored_sum, sum(result))
+      assert_equal(stored_key_count, cache.size)
+    end
+  end
+
   def add_remove(opts = {})
     prelude = 'do_add = rand(2) == 1'
     code = <<-RUBY_EVAL
@@ -130,6 +165,21 @@ class TestCacheTorture < Test::Unit::TestCase
       end
     RUBY_EVAL
     do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+      assert_all_key_mappings_exist(cache, keys, false)
+      assert_equal(cache.size, sum(result))
+    end
+  end
+
+  def add_remove_via_compute(opts = {})
+    prelude = 'do_add = rand(2) == 1'
+    code = <<-RUBY_EVAL
+      if do_add
+        cache.compute_if_absent(key)  { acc += 1; key }
+      else
+        cache.compute_if_present(key) { acc -= 1; nil }
+      end
+    RUBY_EVAL
+    do_thread_loop(:add_remove_via_compute, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end

@@ -99,6 +99,18 @@ public class JRubyCacheBackendLibrary implements Library {
         }
 
         @JRubyMethod
+        public IRubyObject compute_if_present(final ThreadContext context, final IRubyObject key, final Block block) {
+            IRubyObject result = map.computeIfPresent(key, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+                @Override
+                public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
+                    IRubyObject result = block.yieldSpecific(context, oldValue);
+                    return result.isNil() ? null : result;
+                }
+            });
+            return result == null ? context.getRuntime().getNil() : result;
+        }
+
+        @JRubyMethod
         public RubyBoolean replace_pair(IRubyObject key, IRubyObject oldValue, IRubyObject newValue) {
             return getRuntime().newBoolean(map.replace(key, oldValue, newValue));
         }

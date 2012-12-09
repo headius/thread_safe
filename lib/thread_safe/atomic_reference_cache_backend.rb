@@ -417,12 +417,18 @@ module ThreadSafe
       end
     end
 
+    def compute_if_present(key)
+      new_value = nil
+      internal_replace(key) {|old_value| (new_value = yield(old_value)).nil? ? NULL : new_value}
+      new_value
+    end
+
     def replace_pair(key, old_value, new_value)
-      NULL != internal_replace(key, new_value) {|current_value| current_value == old_value}
+      NULL != internal_replace(key, old_value) { new_value }
     end
 
     def replace_if_exists(key, new_value)
-      if (result = internal_replace(key, new_value)) && NULL != result
+      if (result = internal_replace(key) { new_value }) && NULL != result
         result
       end
     end
@@ -452,7 +458,7 @@ module ThreadSafe
     end
 
     def delete_pair(key, value)
-      result = internal_replace(key, NULL) {|current_value| value == current_value}
+      result = internal_replace(key, value) { NULL }
       if result && NULL != result
         !!result
       else
@@ -541,7 +547,7 @@ module ThreadSafe
     #
     # Someday when details settle down a bit more, it might be worth
     # some factoring to reduce sprawl.
-    def internal_replace(key, value, &block)
+    def internal_replace(key, expected_old_value = NULL, &block)
       hash          = key_hash(key)
       current_table = table
       while current_table
@@ -554,22 +560,22 @@ module ThreadSafe
         elsif Node.locked_hash?(node_hash)
           try_await_lock(current_table, i, node)
         else
-          succeeded, old_value = attempt_internal_replace(key, value, hash, current_table, i, node, node_hash, &block)
+          succeeded, old_value = attempt_internal_replace(key, expected_old_value, hash, current_table, i, node, node_hash, &block)
           return old_value if succeeded
         end
       end
       NULL
     end
 
-    def attempt_internal_replace(key, value, hash, current_table, i, node, node_hash)
+    def attempt_internal_replace(key, expected_old_value, hash, current_table, i, node, node_hash)
       current_table.try_lock_via_hash(i, node, node_hash) do
         predecessor_node = nil
         old_value        = NULL
         begin
           if node.matches?(key, hash) && NULL != (current_value = node.value)
-            if !block_given? || yield(current_value)
+            if NULL == expected_old_value || expected_old_value == current_value # NULL == expected_old_value means whatever value
               old_value = current_value
-              if NULL == (node.value = value)
+              if NULL == (node.value = yield(old_value))
                 if predecessor_node
                   predecessor_node.next = node.next
                 else
