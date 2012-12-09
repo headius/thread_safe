@@ -235,7 +235,7 @@ class TestCacheTorture < Test::Unit::TestCase
       run_thread_loop(meth, keys, options, &block)
 
       if options[:key_count] > 1
-        options[:key_count] = (options[:key_count] / 20).to_i
+        options[:key_count] = (options[:key_count] / 40).to_i
         keys = to_hash_collision_keys_array(options[:key_count])
         run_thread_loop(meth, keys, options.merge(:loop_count => (options[:loop_count] * 5)), &block)
       end
