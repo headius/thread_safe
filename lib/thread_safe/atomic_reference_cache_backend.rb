@@ -654,10 +654,10 @@ module ThreadSafe
           succeeded, new_value = current_table.try_to_cas_in_computed(i, hash, key, &block)
           if succeeded
             if NULL == new_value
-              return nil
+              break nil
             else
               increment_size
-              return new_value
+              break new_value
             end
           end
         elsif (node_hash = node.hash) == MOVED
