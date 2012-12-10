@@ -359,6 +359,11 @@ class TestCacheTorture < Test::Unit::TestCase
         acc = 0
         i   = 0
         inc = 100
+
+        pre_loop_inc = loop_count % inc
+        acc          = #{inner_meth_name}_single_key(cache, key, i, pre_loop_inc, acc)
+        i += pre_loop_inc
+
         while i < loop_count
           acc = #{inner_meth_name}_single_key(cache, key, i, inc, acc)
           i += inc
