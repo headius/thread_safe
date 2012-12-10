@@ -153,7 +153,7 @@ class TestCacheTorture < Test::Unit::TestCase
         cache.compute_if_absent(key)  { acc += 1; 1 }
       end
     RUBY_EVAL
-    do_thread_loop(:compute_if_absent_and_present, code, {:loop_count => 5, :prelude => prelude}) do |result, cache, options, keys|
+    do_thread_loop(:compute_if_absent_and_present, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       stored_sum       = 0
       stored_key_count = 0
       keys.each do |k|
@@ -210,7 +210,7 @@ class TestCacheTorture < Test::Unit::TestCase
         cache.compute_if_present(key) { acc -= 1; nil }
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove_via_compute, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(:add_remove_via_compute_if_absent_present, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
