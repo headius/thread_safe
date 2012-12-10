@@ -49,6 +49,15 @@ module ThreadSafe
       end
     end
 
+    def compute(key)
+      if (result = yield(@backend[key])).nil?
+        @backend.delete(key)
+        nil
+      else
+        @backend[key] = result
+      end
+    end
+
     def get_and_set(key, value)
       stored_value = @backend[key]
       @backend[key] = value

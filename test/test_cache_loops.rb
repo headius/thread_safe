@@ -91,6 +91,12 @@ class TestCacheTorture < Test::Unit::TestCase
     add_remove_via_compute(SINGLE_KEY_COUNT_OPTIONS)
   end
 
+  def add_remove_via_compute_if_absent_present
+    add_remove_via_compute_if_absent_present
+    add_remove_via_compute_if_absent_present(LOW_KEY_COUNT_OPTIONS)
+    add_remove_via_compute_if_absent_present(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
   def test_add_remove_indiscriminate
     add_remove_indiscriminate
     add_remove_indiscriminate(LOW_KEY_COUNT_OPTIONS)
@@ -101,6 +107,12 @@ class TestCacheTorture < Test::Unit::TestCase
     count_up
     count_up(LOW_KEY_COUNT_OPTIONS)
     count_up(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
+  def test_count_up_via_compute
+    count_up_via_compute
+    count_up_via_compute(LOW_KEY_COUNT_OPTIONS)
+    count_up_via_compute(SINGLE_KEY_COUNT_OPTIONS)
   end
 
   def test_count_race
@@ -173,6 +185,25 @@ class TestCacheTorture < Test::Unit::TestCase
   def add_remove_via_compute(opts = {})
     prelude = 'do_add = rand(2) == 1'
     code = <<-RUBY_EVAL
+      cache.compute(key) do |old_value|
+        if do_add
+          acc += 1 unless old_value
+          key
+        else
+          acc -= 1 if old_value
+          nil
+        end
+      end
+    RUBY_EVAL
+    do_thread_loop(:add_remove_via_compute, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+      assert_all_key_mappings_exist(cache, keys, false)
+      assert_equal(cache.size, sum(result))
+    end
+  end
+
+  def add_remove_via_compute_if_absent_present(opts = {})
+    prelude = 'do_add = rand(2) == 1'
+    code = <<-RUBY_EVAL
       if do_add
         cache.compute_if_absent(key)  { acc += 1; key }
       else
@@ -206,13 +237,23 @@ class TestCacheTorture < Test::Unit::TestCase
       acc += 1 if cache.replace_pair(key, v, v + 1)
     RUBY_EVAL
     do_thread_loop(:count_up, code, {:loop_count => 5, :cache_setup => ZERO_VALUE_CACHE_SETUP}.merge(opts)) do |result, cache, options, keys|
-      keys.each do |key|
-        unless value = cache[key]
-          assert value
-        end
+      assert_count_up(result, cache, options, keys)
+    end
+  end
+
+  def count_up_via_compute(opts = {})
+    code = <<-RUBY_EVAL
+      cache.compute(key) do |old_value|
+        acc += 1
+        old_value ? old_value + 1 : 1
       end
-      assert_equal(sum(cache.values), sum(result))
-      assert_equal(options[:key_count], cache.size)
+    RUBY_EVAL
+    do_thread_loop(:count_up_via_compute, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+      assert_count_up(result, cache, options, keys)
+      result.inject(nil) do |previous_value, next_value| # since compute guarantees atomicity all count ups should be equal
+        assert_equal previous_value, next_value if previous_value
+        next_value
+      end
     end
   end
 
@@ -353,5 +394,15 @@ class TestCacheTorture < Test::Unit::TestCase
         assert_equal key, value unless key == value # don't do a bazzilion assertions unless necessary
       end
     end
+  end
+
+  def assert_count_up(result, cache, options, keys)
+    keys.each do |key|
+      unless value = cache[key]
+        assert value
+      end
+    end
+    assert_equal(sum(cache.values), sum(result))
+    assert_equal(options[:key_count], cache.size)
   end
 end

@@ -27,6 +27,10 @@ module ThreadSafe
       WRITE_LOCK.synchronize { super }
     end
 
+    def compute(key)
+      WRITE_LOCK.synchronize { super }
+    end
+
     def replace_pair(key, old_value, new_value)
       WRITE_LOCK.synchronize { super }
     end

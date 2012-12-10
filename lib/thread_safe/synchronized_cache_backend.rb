@@ -20,6 +20,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def compute(key)
+      synchronize { super }
+    end
+
     def replace_pair(key, old_value, new_value)
       synchronize { super }
     end

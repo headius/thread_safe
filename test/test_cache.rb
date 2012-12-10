@@ -168,6 +168,41 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_compute
+    with_or_without_default_proc do
+      assert_no_size_change do
+        assert_compute(:a, nil, nil) {}
+      end
+
+      assert_size_change 1 do
+        assert_compute(:a, nil, 1)   {1}
+        assert_compute(:a, 1,   2)   {2}
+        assert_compute(:a, 2, false) {false}
+        assert_equal false, @cache[:a]
+      end
+
+      assert_size_change -1 do
+        assert_compute(:a, false, nil) {}
+      end
+    end
+  end
+
+  def test_compute_with_return
+    with_or_without_default_proc do
+      assert_handles_return_lambda(:compute, :a)
+      @cache[:a] = 1
+      assert_handles_return_lambda(:compute, :a)
+    end
+  end
+
+  def test_compute_if_present_exception
+    with_or_without_default_proc do
+      assert_handles_exception(:compute, :a)
+      @cache[:a] = 1
+      assert_handles_exception(:compute, :a)
+    end
+  end
+
   def test_updates_dont_block_reads
     getters_count = 20
     key_klass     = ThreadSafe::Test::HashCollisionKey
@@ -702,5 +737,13 @@ class TestCache < Test::Unit::TestCase
       assert_equal before_had_key,   @cache.key?(key)
       assert_equal before_had_value, @cache[key] if before_had_value
     end
+  end
+
+  def assert_compute(key, expected_old_value, expected_result)
+    result = @cache.compute(:a) do |old_value|
+      assert_equal expected_old_value, old_value
+      yield
+    end
+    assert_equal expected_result, result
   end
 end

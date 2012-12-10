@@ -200,10 +200,14 @@ module ThreadSafe
         new_node  = Node.new(locked_hash = hash | LOCKED, key, NULL)
         if cas(i, nil, new_node)
           begin
-            new_node.value = new_value = yield
+            if NULL == (new_value = yield(nil))
+              was_null = true
+            else
+              new_node.value = new_value
+            end
             succeeded = true
           ensure
-            volatile_set(i, nil) unless succeeded
+            volatile_set(i, nil) if !succeeded || was_null
             new_node.unlock_via_hash(locked_hash, hash)
           end
         end
@@ -213,6 +217,14 @@ module ThreadSafe
       def try_lock_via_hash(i, node, node_hash)
         node.try_lock_via_hash(node_hash) do
           yield if volatile_get(i) == node
+        end
+      end
+
+      def delete_node_at(i, node, predecessor_node)
+        if predecessor_node
+          predecessor_node.next = node.next
+        else
+          volatile_set(i, node.next)
         end
       end
     end
@@ -422,6 +434,12 @@ module ThreadSafe
       new_value
     end
 
+    def compute(key)
+      new_value = nil
+      internal_compute(key) {|old_value| (new_value = yield(old_value)).nil? ? NULL : new_value}
+      new_value
+    end
+
     def replace_pair(key, old_value, new_value)
       NULL != internal_replace(key, old_value) { new_value }
     end
@@ -575,11 +593,7 @@ module ThreadSafe
             if NULL == expected_old_value || expected_old_value == current_value # NULL == expected_old_value means whatever value
               old_value = current_value
               if NULL == (node.value = yield(old_value))
-                if predecessor_node
-                  predecessor_node.next = node.next
-                else
-                  current_table.volatile_set(i, node.next)
-                end
+                current_table.delete_node_at(i, node, predecessor_node)
                 decrement_size
               end
             end
@@ -609,6 +623,31 @@ module ThreadSafe
       check_for_resize if do_check_for_resize
     end
 
+    def internal_compute(key, &block)
+      hash          = key_hash(key)
+      current_table = table || initialize_table
+      while true
+        if !(node = current_table.volatile_get(i = current_table.hash_to_index(hash)))
+          succeeded, new_value = current_table.try_to_cas_in_computed(i, hash, key, &block)
+          if succeeded
+            if NULL == new_value
+              return nil
+            else
+              increment_size
+              return new_value
+            end
+          end
+        elsif (node_hash = node.hash) == MOVED
+          current_table = node.key
+        elsif Node.locked_hash?(node_hash)
+          try_await_lock(current_table, i, node)
+        else
+          succeeded, old_value = attempt_compute(key, hash, current_table, i, node, node_hash, &block)
+          break old_value if succeeded
+        end
+      end
+    end
+
     def attempt_internal_compute_if_absent(key, hash, current_table, i, node, node_hash)
       added = false
       current_table.try_lock_via_hash(i, node, node_hash) do
@@ -621,6 +660,36 @@ module ThreadSafe
             last.next = Node.new(hash, key, value = yield)
             added = true
             increment_size
+            return true, value
+          end
+        end
+      end
+    ensure
+      check_for_resize if added
+    end
+
+    def attempt_compute(key, hash, current_table, i, node, node_hash)
+      added = false
+      current_table.try_lock_via_hash(i, node, node_hash) do
+        predecessor_node = nil
+        while true
+          if node.matches?(key, hash) && NULL != (value = node.value)
+            if NULL == (node.value = value = yield(value))
+              current_table.delete_node_at(i, node, predecessor_node)
+              decrement_size
+              value = nil
+            end
+            return true, value
+          end
+          predecessor_node = node
+          unless node = node.next
+            if NULL == (value = yield(nil))
+              value = nil
+            else
+              predecessor_node.next = Node.new(hash, key, value)
+              added = true
+              increment_size
+            end
             return true, value
           end
         end
