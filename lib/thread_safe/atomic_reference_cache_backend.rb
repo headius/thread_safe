@@ -453,7 +453,7 @@ module ThreadSafe
     def get_and_set(key, value) # internalPut in the original CHMV8
       hash          = key_hash(key)
       current_table = table || initialize_table
-      while current_table
+      while true
         if !(node = current_table.volatile_get(i = current_table.hash_to_index(hash)))
           if current_table.cas_new_node(i, hash, key, value)
             increment_size
