@@ -195,7 +195,7 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
-  def test_compute_if_present_exception
+  def test_compute_exception
     with_or_without_default_proc do
       assert_handles_exception(:compute, :a)
       @cache[:a] = 1
