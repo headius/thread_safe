@@ -28,8 +28,8 @@ class TestCacheTorture < Test::Unit::TestCase
     :cache_setup  => lambda {|options, keys| ThreadSafe::Cache.new}
   }
 
-  LOW_KEY_COUNT_OPTIONS    = {:loop_count => 150,    :key_count => LOW_KEY_COUNT}
-  SINGLE_KEY_COUNT_OPTIONS = {:loop_count => 1_000,  :key_count => 1}
+  LOW_KEY_COUNT_OPTIONS    = {:loop_count => 150,     :key_count => LOW_KEY_COUNT}
+  SINGLE_KEY_COUNT_OPTIONS = {:loop_count => 100_000, :key_count => 1}
 
   def test_concurrency
     code = <<-RUBY_EVAL
@@ -358,9 +358,10 @@ class TestCacheTorture < Test::Unit::TestCase
       def #{outer_meth_name}_single_key(cache, key, loop_count)
         acc = 0
         i   = 0
+        inc = 100
         while i < loop_count
-          acc = #{inner_meth_name}_single_key(cache, key, 0, 100, acc)
-          i += 1
+          acc = #{inner_meth_name}_single_key(cache, key, i, inc, acc)
+          i += inc
         end
         acc
       end unless method_defined?(:#{outer_meth_name}_single_key)
