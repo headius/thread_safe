@@ -24,6 +24,10 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def merge_pair(key, value)
+      synchronize { super }
+    end
+
     def replace_pair(key, old_value, new_value)
       synchronize { super }
     end

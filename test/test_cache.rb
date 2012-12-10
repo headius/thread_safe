@@ -203,6 +203,41 @@ class TestCache < Test::Unit::TestCase
     end
   end
 
+  def test_merge_pair
+    with_or_without_default_proc do
+      assert_size_change 1 do
+        assert_equal(nil,  @cache.merge_pair(:a, nil) {flunk})
+        assert_equal true, @cache.key?(:a)
+        assert_equal nil,  @cache[:a]
+      end
+
+      assert_no_size_change do
+        assert_merge_pair(:a, nil, nil,   false) {false}
+        assert_merge_pair(:a, nil, false, 1)     {1}
+        assert_merge_pair(:a, nil, 1,     2)     {2}
+      end
+
+      assert_size_change -1 do
+        assert_merge_pair(:a, nil, 2, nil) {}
+        assert_equal false, @cache.key?(:a)
+      end
+    end
+  end
+
+  def test_merge_pair_with_return
+    with_or_without_default_proc do
+      @cache[:a] = 1
+      assert_handles_return_lambda(:merge_pair, :a, 2)
+    end
+  end
+
+  def test_merge_pair_exception
+    with_or_without_default_proc do
+      @cache[:a] = 1
+      assert_handles_exception(:merge_pair, :a, 2)
+    end
+  end
+
   def test_updates_dont_block_reads
     getters_count = 20
     key_klass     = ThreadSafe::Test::HashCollisionKey
@@ -710,12 +745,12 @@ class TestCache < Test::Unit::TestCase
     assert_size_change(0, cache, &block)
   end
 
-  def assert_handles_return_lambda(method, key)
+  def assert_handles_return_lambda(method, key, *args)
     before_had_key   = @cache.key?(key)
     before_had_value = before_had_key ? @cache[key] : nil
 
     returning_lambda = lambda do
-      @cache.send(method, key) { return :direct_return }
+      @cache.send(method, key, *args) { return :direct_return }
     end
 
     assert_no_size_change do
@@ -726,13 +761,13 @@ class TestCache < Test::Unit::TestCase
   end
 
   class TestException < Exception; end
-  def assert_handles_exception(method, key)
+  def assert_handles_exception(method, key, *args)
     before_had_key   = @cache.key?(key)
     before_had_value = before_had_key ? @cache[key] : nil
 
     assert_no_size_change do
       assert_raise(TestException) do
-        @cache.send(method, key) { raise TestException, '' }
+        @cache.send(method, key, *args) { raise TestException, '' }
       end
       assert_equal before_had_key,   @cache.key?(key)
       assert_equal before_had_value, @cache[key] if before_had_value
@@ -741,6 +776,14 @@ class TestCache < Test::Unit::TestCase
 
   def assert_compute(key, expected_old_value, expected_result)
     result = @cache.compute(:a) do |old_value|
+      assert_equal expected_old_value, old_value
+      yield
+    end
+    assert_equal expected_result, result
+  end
+
+  def assert_merge_pair(key, value, expected_old_value, expected_result)
+    result = @cache.merge_pair(key, value) do |old_value|
       assert_equal expected_old_value, old_value
       yield
     end

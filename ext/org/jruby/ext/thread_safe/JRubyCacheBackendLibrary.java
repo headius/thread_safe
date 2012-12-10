@@ -123,6 +123,18 @@ public class JRubyCacheBackendLibrary implements Library {
         }
 
         @JRubyMethod
+        public IRubyObject merge_pair(final ThreadContext context, final IRubyObject key, final IRubyObject value, final Block block) {
+            IRubyObject result = map.merge(key, value, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+                @Override
+                public IRubyObject apply(IRubyObject oldValue, IRubyObject newValue) {
+                    IRubyObject result = block.yieldSpecific(context, oldValue);
+                    return result.isNil() ? null : result;
+                }
+            });
+            return result == null ? context.getRuntime().getNil() : result;
+        }
+
+        @JRubyMethod
         public RubyBoolean replace_pair(IRubyObject key, IRubyObject oldValue, IRubyObject newValue) {
             return getRuntime().newBoolean(map.replace(key, oldValue, newValue));
         }

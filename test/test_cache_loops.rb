@@ -79,6 +79,12 @@ class TestCacheTorture < Test::Unit::TestCase
     add_remove_to_zero(SINGLE_KEY_COUNT_OPTIONS)
   end
 
+  def test_add_remove_to_zero_via_merge_pair
+    add_remove_to_zero_via_merge_pair
+    add_remove_to_zero_via_merge_pair(LOW_KEY_COUNT_OPTIONS)
+    add_remove_to_zero_via_merge_pair(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
   def test_add_remove
     add_remove
     add_remove(LOW_KEY_COUNT_OPTIONS)
@@ -113,6 +119,12 @@ class TestCacheTorture < Test::Unit::TestCase
     count_up_via_compute
     count_up_via_compute(LOW_KEY_COUNT_OPTIONS)
     count_up_via_compute(SINGLE_KEY_COUNT_OPTIONS)
+  end
+
+  def test_count_up_via_merge_pair
+    count_up_via_merge_pair
+    count_up_via_merge_pair(LOW_KEY_COUNT_OPTIONS)
+    count_up_via_merge_pair(SINGLE_KEY_COUNT_OPTIONS)
   end
 
   def test_count_race
@@ -257,12 +269,39 @@ class TestCacheTorture < Test::Unit::TestCase
     end
   end
 
+  def count_up_via_merge_pair(opts = {})
+    code = <<-RUBY_EVAL
+      cache.merge_pair(key, 1) {|old_value| old_value + 1}
+    RUBY_EVAL
+    do_thread_loop(:count_up_via_merge_pair, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+      all_match      = true
+      expected_value = options[:loop_count] * options[:thread_count]
+      keys.each do |key|
+        if expected_value != (value = cache[key])
+          all_match = false
+          break
+        end
+      end
+      assert all_match
+    end
+  end
+
   def add_remove_to_zero(opts = {})
     code = <<-RUBY_EVAL
       acc += 1 unless cache.put_if_absent(key, key)
       acc -= 1 if cache.delete_pair(key, key)
     RUBY_EVAL
     do_thread_loop(:add_remove_to_zero, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+      assert_all_key_mappings_exist(cache, keys, false)
+      assert_equal(cache.size, sum(result))
+    end
+  end
+
+  def add_remove_to_zero_via_merge_pair(opts = {})
+    code = <<-RUBY_EVAL
+      acc += (cache.merge_pair(key, key) {}) ? -1 : 1
+    RUBY_EVAL
+    do_thread_loop(:add_remove_to_zero_via_merge_pair, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end

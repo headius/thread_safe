@@ -200,7 +200,7 @@ module ThreadSafe
         new_node  = Node.new(locked_hash = hash | LOCKED, key, NULL)
         if cas(i, nil, new_node)
           begin
-            if NULL == (new_value = yield(nil))
+            if NULL == (new_value = yield(NULL))
               was_null = true
             else
               new_node.value = new_value
@@ -430,13 +430,36 @@ module ThreadSafe
 
     def compute_if_present(key)
       new_value = nil
-      internal_replace(key) {|old_value| (new_value = yield(old_value)).nil? ? NULL : new_value}
+      internal_replace(key) do |old_value|
+        if (new_value = yield(NULL == old_value ? nil : old_value)).nil?
+          NULL
+        else
+          new_value
+        end
+      end
       new_value
     end
 
     def compute(key)
       new_value = nil
-      internal_compute(key) {|old_value| (new_value = yield(old_value)).nil? ? NULL : new_value}
+      internal_compute(key) do |old_value|
+        if (new_value = yield(NULL == old_value ? nil : old_value)).nil?
+          NULL
+        else
+          new_value
+        end
+      end
+      new_value
+    end
+
+    def merge_pair(key, new_value)
+      internal_compute(key) do |old_value|
+        if NULL == old_value || !(new_value = yield(old_value)).nil?
+          new_value
+        else
+          NULL
+        end
+      end
       new_value
     end
 
@@ -683,7 +706,7 @@ module ThreadSafe
           end
           predecessor_node = node
           unless node = node.next
-            if NULL == (value = yield(nil))
+            if NULL == (value = yield(NULL))
               value = nil
             else
               predecessor_node.next = Node.new(hash, key, value)

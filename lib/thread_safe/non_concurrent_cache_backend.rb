@@ -40,21 +40,19 @@ module ThreadSafe
 
     def compute_if_present(key)
       if NULL != (stored_value = @backend.fetch(key, NULL))
-        if (new_value = yield(stored_value)).nil?
-          @backend.delete(key)
-          nil
-        else
-          @backend[key] = new_value
-        end
+        store_computed_value(key, yield(stored_value))
       end
     end
 
     def compute(key)
-      if (result = yield(@backend[key])).nil?
-        @backend.delete(key)
-        nil
+      store_computed_value(key, yield(@backend[key]))
+    end
+
+    def merge_pair(key, value)
+      if NULL == (stored_value = @backend.fetch(key, NULL))
+        @backend[key] = value
       else
-        @backend[key] = result
+        store_computed_value(key, yield(stored_value))
       end
     end
 
@@ -121,6 +119,15 @@ module ThreadSafe
 
     def pair?(key, expected_value)
       NULL != (stored_value = @backend.fetch(key, NULL)) && expected_value.equal?(stored_value)
+    end
+
+    def store_computed_value(key, new_value)
+      if new_value.nil?
+        @backend.delete(key)
+        nil
+      else
+        @backend[key] = new_value
+      end
     end
   end
 end
