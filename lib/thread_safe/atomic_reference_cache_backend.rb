@@ -665,8 +665,8 @@ module ThreadSafe
         elsif Node.locked_hash?(node_hash)
           try_await_lock(current_table, i, node)
         else
-          succeeded, old_value = attempt_compute(key, hash, current_table, i, node, node_hash, &block)
-          break old_value if succeeded
+          succeeded, new_value = attempt_compute(key, hash, current_table, i, node, node_hash, &block)
+          break new_value if succeeded
         end
       end
     end
