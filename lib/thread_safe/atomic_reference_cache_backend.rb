@@ -441,7 +441,6 @@ module ThreadSafe
     end
 
     def compute(key)
-      new_value = nil
       internal_compute(key) do |old_value|
         if (new_value = yield(NULL == old_value ? nil : old_value)).nil?
           NULL
@@ -449,18 +448,16 @@ module ThreadSafe
           new_value
         end
       end
-      new_value
     end
 
-    def merge_pair(key, new_value)
+    def merge_pair(key, value)
       internal_compute(key) do |old_value|
-        if NULL == old_value || !(new_value = yield(old_value)).nil?
-          new_value
+        if NULL == old_value || !(value = yield(old_value)).nil?
+          value
         else
           NULL
         end
       end
-      new_value
     end
 
     def replace_pair(key, old_value, new_value)
