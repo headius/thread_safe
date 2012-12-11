@@ -17,7 +17,7 @@ if defined?(JRUBY_VERSION)
   desc "Clean up build artifacts"
   task :clean do
     rm_rf "pkg/classes"
-    rm_rf "lib/thread_safe/concurrent_cache_backend.jar"
+    rm_rf "lib/thread_safe/jruby_cache_backend.jar"
   end
 
   desc "Compile the extension"
@@ -29,7 +29,7 @@ if defined?(JRUBY_VERSION)
 
   desc "Build the jar"
   task :jar => :compile do
-    ant.jar :basedir => "pkg/classes", :destfile => "lib/thread_safe/concurrent_cache_backend.jar", :includes => "**/*.class"
+    ant.jar :basedir => "pkg/classes", :destfile => "lib/thread_safe/jruby_cache_backend.jar", :includes => "**/*.class"
   end
 
   task :package => :jar
