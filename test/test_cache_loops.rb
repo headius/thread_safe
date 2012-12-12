@@ -330,7 +330,7 @@ class TestCacheTorture < Test::Unit::TestCase
       Thread.new do
         setup_sync_and_start_loop(meth, cache, keys, barrier, options[:loop_count])
       end
-    end.map(&:value).tap{|x| puts(([{:meth => meth, :time => "#{Time.now - t}s", :loop_count => options[:loop_count], :key_count => keys.size}] + x).inspect)}
+    end.map(&:value)
     yield result, cache, options, keys if block_given?
   end
 
