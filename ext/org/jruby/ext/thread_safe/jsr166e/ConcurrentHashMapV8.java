@@ -11,6 +11,7 @@ package org.jruby.ext.thread_safe.jsr166e;
 import org.jruby.RubyClass;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.ext.thread_safe.jsr166y.ThreadLocalRandom;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
 
@@ -25,7 +26,6 @@ import java.util.Enumeration;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 import java.io.Serializable;
