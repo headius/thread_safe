@@ -4,6 +4,8 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
+// This is based on 1.16 version
+
 package org.jruby.ext.thread_safe.jsr166y;
 
 import java.util.Random;
