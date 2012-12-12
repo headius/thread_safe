@@ -1,27 +1,25 @@
-module ThreadSafe
-  autoload :NonConcurrentCacheBackend, 'thread_safe/non_concurrent_cache_backend'
-  autoload :SynchronizedCacheBackend,  'thread_safe/synchronized_cache_backend'
-  
-  begin
-    ConcurrentCacheBackend # trigger autoload
-  rescue NameError
-    begin
-      # there seems to be a bug in JRuby, whereas autoload doesn't pick up on .jars
-      require 'thread_safe/concurrent_cache_backend'
-    rescue LoadError
-    end
-  end
+require 'thread'
 
-  unless defined?(ConcurrentCacheBackend) && ConcurrentCacheBackend
-    if defined?(RUBY_ENGINE) && RUBY_ENGINE == 'ruby'
-      ConcurrentCacheBackend = NonConcurrentCacheBackend
+module ThreadSafe
+  autoload :JRubyCacheBackend,           'thread_safe/jruby_cache_backend'
+  autoload :MriCacheBackend,             'thread_safe/mri_cache_backend'
+  autoload :NonConcurrentCacheBackend,   'thread_safe/non_concurrent_cache_backend'
+  autoload :AtomicReferenceCacheBackend, 'thread_safe/atomic_reference_cache_backend'
+  autoload :SynchronizedCacheBackend,    'thread_safe/synchronized_cache_backend'
+
+  ConcurrentCacheBackend =
+    case defined?(RUBY_ENGINE) && RUBY_ENGINE
+    when 'jruby'; JRubyCacheBackend
+    when 'ruby';  MriCacheBackend
+    when 'rbx';   AtomicReferenceCacheBackend
     else
       warn 'ThreadSafe: unsupported Ruby engine, using a fully synchronized ThreadSafe::Cache implementation' if $VERBOSE
-      ConcurrentCacheBackend = SynchronizedCacheBackend
+      SynchronizedCacheBackend
     end
-  end
 
   class Cache < ConcurrentCacheBackend
+    KEY_ERROR = defined?(KeyError) ? KeyError : IndexError # there is no KeyError in 1.8 mode
+
     def initialize(options = nil, &block)
       if options.kind_of?(::Hash)
         validate_options_hash!(options)
@@ -43,51 +41,96 @@ module ThreadSafe
       end
     end
 
-    def fetch(key)
-      if value = self[key]
+    def fetch(key, default_value = NULL)
+      if NULL != (value = get_or_default(key, NULL))
         value
-      elsif !key?(key) && block_given?
-        self[key] = yield(key)
+      elsif block_given?
+        yield key
+      elsif NULL != default_value
+        default_value
       else
-        value
+        raise KEY_ERROR, 'key not found'
       end
     end
+
+    def put_if_absent(key, value)
+      computed = false
+      result = compute_if_absent(key) do
+        computed = true
+        value
+      end
+      computed ? nil : result
+    end unless method_defined?(:put_if_absent)
+
+    def value?(value)
+      each_value do |v|
+        return true if value.equal?(v)
+      end
+      false
+    end unless method_defined?(:value?)
 
     def keys
       arr = []
       each_pair {|k, v| arr << k}
       arr
-    end
+    end unless method_defined?(:keys)
 
     def values
       arr = []
       each_pair {|k, v| arr << v}
       arr
-    end
+    end unless method_defined?(:values)
 
     def each_key
       each_pair {|k, v| yield k}
-    end
+    end unless method_defined?(:each_key)
 
     def each_value
       each_pair {|k, v| yield v}
-    end
+    end unless method_defined?(:each_value)
 
     def empty?
       each_pair {|k, v| return false}
       true
+    end unless method_defined?(:empty?)
+
+    def size
+      count = 0
+      each_pair {|k, v| count += 1}
+      count
+    end unless method_defined?(:size)
+
+    def marshal_dump
+      raise TypeError, "can't dump hash with default proc" if @default_proc
+      h = {}
+      each_pair {|k, v| h[k] = v}
+      h
     end
 
+    def marshal_load(hash)
+      initialize
+      populate_from(hash)
+    end
+
+    undef :freeze
+
     private
+    def initialize_copy(other)
+      super
+      populate_from(other)
+    end
+
+    def populate_from(hash)
+      hash.each_pair {|k, v| self[k] = v}
+      self
+    end
+
     def validate_options_hash!(options)
       if (initial_capacity = options[:initial_capacity]) && (!initial_capacity.kind_of?(Fixnum) || initial_capacity < 0)
         raise ArgumentError, ":initial_capacity must be a positive Fixnum"
       end
       if (load_factor = options[:load_factor]) && (!load_factor.kind_of?(Numeric) || load_factor <= 0 || load_factor > 1)
         raise ArgumentError, ":load_factor must be a number between 0 and 1"
-      end
-      if (concurrency_level = options[:concurrency_level]) && (!concurrency_level.kind_of?(Fixnum) || concurrency_level < 1)
-        raise ArgumentError, ":concurrency_level must be a Fixnum greater or equal than 1"
       end
     end
   end

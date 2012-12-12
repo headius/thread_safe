@@ -2,6 +2,7 @@ module ThreadSafe
   class SynchronizedCacheBackend < NonConcurrentCacheBackend
     require 'mutex_m'
     include Mutex_m
+    # WARNING: Mutex_m is a non-reentrant lock, so the synchronized methods are not allowed to call each other.
 
     def [](key)
       synchronize { super }
@@ -11,7 +12,31 @@ module ThreadSafe
       synchronize { super }
     end
 
-    def put_if_absent(key, value)
+    def compute_if_absent(key)
+      synchronize { super }
+    end
+
+    def compute_if_present(key)
+      synchronize { super }
+    end
+
+    def compute(key)
+      synchronize { super }
+    end
+
+    def merge_pair(key, value)
+      synchronize { super }
+    end
+
+    def replace_pair(key, old_value, new_value)
+      synchronize { super }
+    end
+
+    def replace_if_exists(key, new_value)
+      synchronize { super }
+    end
+
+    def get_and_set(key, value)
       synchronize { super }
     end
 
@@ -19,7 +44,15 @@ module ThreadSafe
       synchronize { super }
     end
 
+    def value?(value)
+      synchronize { super }
+    end
+
     def delete(key)
+      synchronize { super }
+    end
+
+    def delete_pair(key, value)
       synchronize { super }
     end
 
@@ -27,23 +60,17 @@ module ThreadSafe
       synchronize { super }
     end
 
-    def each_pair
-      collection = []
-      synchronize do
-        super do |k, v|
-          collection << k << v
-        end
-      end
+    def size
+      synchronize { super }
+    end
 
-      i = 0
-      total = collection.length
+    def get_or_default(key, default_value)
+      synchronize { super }
+    end
 
-      while i < total
-        yield collection[i], collection[i + 1]
-        i += 2
-      end
-
-      self
+    private
+    def dupped_backend
+      synchronize { super }
     end
   end
 end
