@@ -1,3 +1,5 @@
+require 'thread'
+
 class Thread
   LOCK = Mutex.new # :nodoc:
 

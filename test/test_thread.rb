@@ -1,4 +1,3 @@
-require 'thread'
 require 'test/unit'
 require 'thread_safe/core_ext/thread'
 
