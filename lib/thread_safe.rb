@@ -27,7 +27,7 @@ module ThreadSafe
     class Hash < ::Hash
       include JRuby::Synchronized
     end
-  elsif defined?(RUBY_ENGINE) && RUBY_ENGINE == 'ruby'
+  elsif !defined?(RUBY_ENGINE) || RUBY_ENGINE == 'ruby'
     # Because MRI never runs code in parallel, the existing
     # non-thread-safe structures should usually work fine.
     Array = ::Array
