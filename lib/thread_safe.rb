@@ -1,4 +1,5 @@
 require 'thread_safe/version'
+require 'thread_safe/synchronized_delegator'
 
 module ThreadSafe
   autoload :Cache, 'thread_safe/cache'
