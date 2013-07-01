@@ -3,6 +3,7 @@ package org.jruby.ext.thread_safe;
 import org.jruby.*;
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
+import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMap;
 import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
@@ -39,7 +40,7 @@ public class JRubyCacheBackendLibrary implements Library {
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-        private ConcurrentHashMapV8<IRubyObject, IRubyObject> map;
+        private ConcurrentHashMap<IRubyObject, IRubyObject> map;
 
         public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
             super(runtime, klass);
@@ -90,7 +91,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute_if_absent(final ThreadContext context, final IRubyObject key, final Block block) {
-            return map.computeIfAbsent(key, new ConcurrentHashMapV8.Fun<IRubyObject, IRubyObject>() {
+            return map.computeIfAbsent(key, new ConcurrentHashMap.Fun<IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key) {
                     return block.yieldSpecific(context);
@@ -100,7 +101,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute_if_present(final ThreadContext context, final IRubyObject key, final Block block) {
-            IRubyObject result = map.computeIfPresent(key, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+            IRubyObject result = map.computeIfPresent(key, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
                     IRubyObject result = block.yieldSpecific(context, oldValue);
@@ -112,7 +113,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute(final ThreadContext context, final IRubyObject key, final Block block) {
-            IRubyObject result = map.compute(key, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+            IRubyObject result = map.compute(key, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
                     IRubyObject result = block.yieldSpecific(context, oldValue);
@@ -124,7 +125,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject merge_pair(final ThreadContext context, final IRubyObject key, final IRubyObject value, final Block block) {
-            IRubyObject result = map.merge(key, value, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+            IRubyObject result = map.merge(key, value, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject oldValue, IRubyObject newValue) {
                     IRubyObject result = block.yieldSpecific(context, oldValue);

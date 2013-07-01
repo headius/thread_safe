@@ -217,7 +217,7 @@ import java.io.Serializable;
  * @param <V> the type of mapped values
  */
 public class ConcurrentHashMapV8<K, V>
-        implements ConcurrentMap<K, V>, Serializable {
+        implements ConcurrentMap<K, V>, Serializable, ConcurrentHashMap<K, V> {
     private static final long serialVersionUID = 7249069246763182397L;
 
     /**
@@ -3437,10 +3437,6 @@ public class ConcurrentHashMapV8<K, V>
     /** Interface describing a void action of two arguments */
     public interface BiAction<A,B> { void apply(A a, B b); }
     /** Interface describing a function of one argument */
-    public interface Fun<A,T> { T apply(A a); }
-    /** Interface describing a function of two arguments */
-    public interface BiFun<A,B,T> { T apply(A a, B b); }
-    /** Interface describing a function of no arguments */
     public interface Generator<T> { T apply(); }
     /** Interface describing a function mapping its argument to a double */
     public interface ObjectToDouble<A> { double apply(A a); }
