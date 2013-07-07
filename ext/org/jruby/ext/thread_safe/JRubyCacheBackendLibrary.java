@@ -5,6 +5,7 @@ import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
 import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMap;
 import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8;
+import org.jruby.ext.thread_safe.jsr166e.nounsafe.*;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -40,14 +41,32 @@ public class JRubyCacheBackendLibrary implements Library {
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
+        static final boolean CAN_USE_UNSAFE_CHM = canUseUnsafeCHM();
+
         private ConcurrentHashMap<IRubyObject, IRubyObject> map;
 
         private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM(int initialCapacity, float loadFactor) {
-            return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+            if (CAN_USE_UNSAFE_CHM) {
+                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+            } else {
+                return new org.jruby.ext.thread_safe.jsr166e.nounsafe.ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+            }
         }
 
         private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM() {
             return newCHM(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+        }
+
+        private static boolean canUseUnsafeCHM() {
+            try {
+                new org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8(); // force class load and initialization
+                return true;
+            } catch (Throwable t) { // ensuring we really do catch everything
+                if (t.getMessage().indexOf("Could not initialize intrinsics") == -1) { // Doug's Unsafe setup errors always have this message
+                    throw (t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t));
+                }
+                return false;
+            }
         }
 
         public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
