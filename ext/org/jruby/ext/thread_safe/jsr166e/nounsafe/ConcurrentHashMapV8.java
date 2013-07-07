@@ -11,6 +11,7 @@ package org.jruby.ext.thread_safe.jsr166e.nounsafe;
 import org.jruby.RubyClass;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMap;
 import org.jruby.ext.thread_safe.jsr166y.ThreadLocalRandom;
 import org.jruby.runtime.ThreadContext;
 import org.jruby.runtime.builtin.IRubyObject;
@@ -26,6 +27,8 @@ import java.util.Enumeration;
 import java.util.ConcurrentModificationException;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 import java.io.Serializable;
@@ -555,12 +558,12 @@ public class ConcurrentHashMapV8<K, V>
      * The array of bins. Lazily initialized upon first insertion.
      * Size is always a power of two. Accessed directly by iterators.
      */
-    transient volatile Node[] table;
+    transient volatile AtomicReferenceArray<Node> table;
 
     /**
      * The counter maintaining number of elements.
      */
-    private transient final LongAdder counter;
+    private transient LongAdder counter;
 
     /**
      * Table initialization and resizing control.  When negative, the
@@ -579,6 +582,8 @@ public class ConcurrentHashMapV8<K, V>
     /** For serialization compatibility. Null unless serialized; see below */
     private Segment<K,V>[] segments;
 
+    static AtomicIntegerFieldUpdater SIZE_CTRL_UPDATER = AtomicIntegerFieldUpdater.newUpdater(ConcurrentHashMapV8.class, "sizeCtl");
+
     /* ---------------- Table element access -------------- */
 
     /*
@@ -593,16 +598,16 @@ public class ConcurrentHashMapV8<K, V>
      * inline assignments below.
      */
 
-    static final Node tabAt(Node[] tab, int i) { // used by Iter
-        return (Node)UNSAFE.getObjectVolatile(tab, ((long)i<<ASHIFT)+ABASE);
+    static final Node tabAt(AtomicReferenceArray<Node> tab, int i) { // used by Iter
+        return tab.get(i);
     }
 
-    private static final boolean casTabAt(Node[] tab, int i, Node c, Node v) {
-        return UNSAFE.compareAndSwapObject(tab, ((long)i<<ASHIFT)+ABASE, c, v);
+    private static final boolean casTabAt(AtomicReferenceArray<Node> tab, int i, Node c, Node v) {
+        return tab.compareAndSet(i, c, v);
     }
 
-    private static final void setTabAt(Node[] tab, int i, Node v) {
-        UNSAFE.putObjectVolatile(tab, ((long)i<<ASHIFT)+ABASE, v);
+    private static final void setTabAt(AtomicReferenceArray<Node> tab, int i, Node v) {
+        tab.set(i, v);
     }
 
     /* ---------------- Nodes -------------- */
@@ -623,6 +628,8 @@ public class ConcurrentHashMapV8<K, V>
         volatile Object val;
         volatile Node next;
 
+        static AtomicIntegerFieldUpdater HASH_UPDATER = AtomicIntegerFieldUpdater.newUpdater(Node.class, "hash");
+
         Node(int hash, Object key, Object val, Node next) {
             this.hash = hash;
             this.key = key;
@@ -632,7 +639,7 @@ public class ConcurrentHashMapV8<K, V>
 
         /** CompareAndSet the hash field */
         final boolean casHash(int cmp, int val) {
-            return UNSAFE.compareAndSwapInt(this, hashOffset, cmp, val);
+            return HASH_UPDATER.compareAndSet(this, cmp, val);
         }
 
         /** The number of spins before blocking for a lock */
@@ -656,8 +663,8 @@ public class ConcurrentHashMapV8<K, V>
          * necessary in the only usages of this method, but enables
          * use in other future contexts.
          */
-        final void tryAwaitLock(Node[] tab, int i) {
-            if (tab != null && i >= 0 && i < tab.length) { // sanity check
+        final void tryAwaitLock(AtomicReferenceArray<Node> tab, int i) {
+            if (tab != null && i >= 0 && i < tab.length()) { // sanity check
                 int r = ThreadLocalRandom.current().nextInt(); // randomize spins
                 int spins = MAX_SPINS, h;
                 while (tabAt(tab, i) == this && ((h = hash) & LOCKED) != 0) {
@@ -682,21 +689,6 @@ public class ConcurrentHashMapV8<K, V>
                         break;
                     }
                 }
-            }
-        }
-
-        // Unsafe mechanics for casHash
-        private static final sun.misc.Unsafe UNSAFE;
-        private static final long hashOffset;
-
-        static {
-            try {
-                UNSAFE = getUnsafe();
-                Class<?> k = Node.class;
-                hashOffset = UNSAFE.objectFieldOffset
-                        (k.getDeclaredField("hash"));
-            } catch (Exception e) {
-                throw new Error(e);
             }
         }
     }
@@ -1208,9 +1200,9 @@ public class ConcurrentHashMapV8<K, V>
      * Fails to replace if the given key is non-comparable or table
      * is, or needs, resizing.
      */
-    private final void replaceWithTreeBin(Node[] tab, int index, Object key) {
+    private final void replaceWithTreeBin(AtomicReferenceArray<Node> tab, int index, Object key) {
         if ((key instanceof Comparable) &&
-                (tab.length >= MAXIMUM_CAPACITY || counter.sum() < (long)sizeCtl)) {
+                (tab.length() >= MAXIMUM_CAPACITY || counter.sum() < (long)sizeCtl)) {
             TreeBin t = new TreeBin();
             for (Node e = tabAt(tab, index); e != null; e = e.next)
                 t.putTreeNode(e.hash & HASH_BITS, e.key, e.val);
@@ -1223,14 +1215,14 @@ public class ConcurrentHashMapV8<K, V>
     /** Implementation for get and containsKey */
     private final Object internalGet(Object k) {
         int h = spread(k.hashCode());
-        retry: for (Node[] tab = table; tab != null;) {
+        retry: for (AtomicReferenceArray<Node> tab = table; tab != null;) {
             Node e, p; Object ek, ev; int eh;      // locals to read fields once
-            for (e = tabAt(tab, (tab.length - 1) & h); e != null; e = e.next) {
+            for (e = tabAt(tab, (tab.length() - 1) & h); e != null; e = e.next) {
                 if ((eh = e.hash) == MOVED) {
                     if ((ek = e.key) instanceof TreeBin)  // search TreeBin
                         return ((TreeBin)ek).getValue(h, k);
                     else {                        // restart with new table
-                        tab = (Node[])ek;
+                        tab = (AtomicReferenceArray<Node>)ek;
                         continue retry;
                     }
                 }
@@ -1251,10 +1243,10 @@ public class ConcurrentHashMapV8<K, V>
     private final Object internalReplace(Object k, Object v, Object cv) {
         int h = spread(k.hashCode());
         Object oldVal = null;
-        for (Node[] tab = table;;) {
+        for (AtomicReferenceArray<Node> tab = table;;) {
             Node f; int i, fh; Object fk;
             if (tab == null ||
-                    (f = tabAt(tab, i = (tab.length - 1) & h)) == null)
+                    (f = tabAt(tab, i = (tab.length() - 1) & h)) == null)
                 break;
             else if ((fh = f.hash) == MOVED) {
                 if ((fk = f.key) instanceof TreeBin) {
@@ -1287,7 +1279,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & HASH_BITS) != h && f.next == null) // precheck
                 break;                          // rules out possible existence
@@ -1372,11 +1364,11 @@ public class ConcurrentHashMapV8<K, V>
     private final Object internalPut(Object k, Object v) {
         int h = spread(k.hashCode());
         int count = 0;
-        for (Node[] tab = table;;) {
+        for (AtomicReferenceArray<Node> tab = table;;) {
             int i; Node f; int fh; Object fk;
             if (tab == null)
                 tab = initTable();
-            else if ((f = tabAt(tab, i = (tab.length - 1) & h)) == null) {
+            else if ((f = tabAt(tab, i = (tab.length() - 1) & h)) == null) {
                 if (casTabAt(tab, i, null, new Node(h, k, v, null)))
                     break;                   // no lock when adding to empty bin
             }
@@ -1404,7 +1396,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & LOCKED) != 0) {
                 checkForResize();
@@ -1442,7 +1434,7 @@ public class ConcurrentHashMapV8<K, V>
                 if (count != 0) {
                     if (oldVal != null)
                         return oldVal;
-                    if (tab.length <= 64)
+                    if (tab.length() <= 64)
                         count = 2;
                     break;
                 }
@@ -1458,11 +1450,11 @@ public class ConcurrentHashMapV8<K, V>
     private final Object internalPutIfAbsent(Object k, Object v) {
         int h = spread(k.hashCode());
         int count = 0;
-        for (Node[] tab = table;;) {
+        for (AtomicReferenceArray<Node> tab = table;;) {
             int i; Node f; int fh; Object fk, fv;
             if (tab == null)
                 tab = initTable();
-            else if ((f = tabAt(tab, i = (tab.length - 1) & h)) == null) {
+            else if ((f = tabAt(tab, i = (tab.length() - 1) & h)) == null) {
                 if (casTabAt(tab, i, null, new Node(h, k, v, null)))
                     break;
             }
@@ -1488,7 +1480,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & HASH_BITS) == h && (fv = f.val) != null &&
                     ((fk = f.key) == k || k.equals(fk)))
@@ -1542,7 +1534,7 @@ public class ConcurrentHashMapV8<K, V>
                     if (count != 0) {
                         if (oldVal != null)
                             return oldVal;
-                        if (tab.length <= 64)
+                        if (tab.length() <= 64)
                             count = 2;
                         break;
                     }
@@ -1561,11 +1553,11 @@ public class ConcurrentHashMapV8<K, V>
         int h = spread(k.hashCode());
         Object val = null;
         int count = 0;
-        for (Node[] tab = table;;) {
+        for (AtomicReferenceArray<Node> tab = table;;) {
             Node f; int i, fh; Object fk, fv;
             if (tab == null)
                 tab = initTable();
-            else if ((f = tabAt(tab, i = (tab.length - 1) & h)) == null) {
+            else if ((f = tabAt(tab, i = (tab.length() - 1) & h)) == null) {
                 Node node = new Node(fh = h | LOCKED, k, null, null);
                 if (casTabAt(tab, i, null, node)) {
                     count = 1;
@@ -1611,7 +1603,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & HASH_BITS) == h && (fv = f.val) != null &&
                     ((fk = f.key) == k || k.equals(fk)))
@@ -1668,7 +1660,7 @@ public class ConcurrentHashMapV8<K, V>
                     if (count != 0) {
                         if (!added)
                             return val;
-                        if (tab.length <= 64)
+                        if (tab.length() <= 64)
                             count = 2;
                         break;
                     }
@@ -1690,11 +1682,11 @@ public class ConcurrentHashMapV8<K, V>
         Object val = null;
         int delta = 0;
         int count = 0;
-        for (Node[] tab = table;;) {
+        for (AtomicReferenceArray<Node> tab = table;;) {
             Node f; int i, fh; Object fk;
             if (tab == null)
                 tab = initTable();
-            else if ((f = tabAt(tab, i = (tab.length - 1) & h)) == null) {
+            else if ((f = tabAt(tab, i = (tab.length() - 1) & h)) == null) {
                 if (onlyIfPresent)
                     break;
                 Node node = new Node(fh = h | LOCKED, k, null, null);
@@ -1753,7 +1745,7 @@ public class ConcurrentHashMapV8<K, V>
                         break;
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & LOCKED) != 0) {
                 checkForResize();
@@ -1800,7 +1792,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 if (count != 0) {
-                    if (tab.length <= 64)
+                    if (tab.length() <= 64)
                         count = 2;
                     break;
                 }
@@ -1821,11 +1813,11 @@ public class ConcurrentHashMapV8<K, V>
         Object val = null;
         int delta = 0;
         int count = 0;
-        for (Node[] tab = table;;) {
+        for (AtomicReferenceArray<Node> tab = table;;) {
             int i; Node f; int fh; Object fk, fv;
             if (tab == null)
                 tab = initTable();
-            else if ((f = tabAt(tab, i = (tab.length - 1) & h)) == null) {
+            else if ((f = tabAt(tab, i = (tab.length() - 1) & h)) == null) {
                 if (casTabAt(tab, i, null, new Node(h, k, v, null))) {
                     delta = 1;
                     val = v;
@@ -1862,7 +1854,7 @@ public class ConcurrentHashMapV8<K, V>
                         break;
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & LOCKED) != 0) {
                 checkForResize();
@@ -1908,7 +1900,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 if (count != 0) {
-                    if (tab.length <= 64)
+                    if (tab.length() <= 64)
                         count = 2;
                     break;
                 }
@@ -1936,11 +1928,11 @@ public class ConcurrentHashMapV8<K, V>
                     break;
                 }
                 int h = spread(k.hashCode());
-                for (Node[] tab = table;;) {
+                for (AtomicReferenceArray<Node> tab = table;;) {
                     int i; Node f; int fh; Object fk;
                     if (tab == null)
                         tab = initTable();
-                    else if ((f = tabAt(tab, i = (tab.length - 1) & h)) == null){
+                    else if ((f = tabAt(tab, i = (tab.length() - 1) & h)) == null){
                         if (casTabAt(tab, i, null, new Node(h, k, v, null))) {
                             ++delta;
                             break;
@@ -1969,7 +1961,7 @@ public class ConcurrentHashMapV8<K, V>
                                 break;
                         }
                         else
-                            tab = (Node[])fk;
+                            tab = (AtomicReferenceArray<Node>)fk;
                     }
                     else if ((fh & LOCKED) != 0) {
                         counter.add(delta);
@@ -2044,16 +2036,16 @@ public class ConcurrentHashMapV8<K, V>
     /**
      * Initializes table, using the size recorded in sizeCtl.
      */
-    private final Node[] initTable() {
-        Node[] tab; int sc;
+    private final AtomicReferenceArray<Node> initTable() {
+        AtomicReferenceArray<Node> tab; int sc;
         while ((tab = table) == null) {
             if ((sc = sizeCtl) < 0)
                 Thread.yield(); // lost initialization race; just spin
-            else if (UNSAFE.compareAndSwapInt(this, sizeCtlOffset, sc, -1)) {
+            else if (SIZE_CTRL_UPDATER.compareAndSet(this, sc, -1)) {
                 try {
                     if ((tab = table) == null) {
                         int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
-                        tab = table = new Node[n];
+                        tab = table = new AtomicReferenceArray<Node>(n);
                         sc = n - (n >>> 2);
                     }
                 } finally {
@@ -2072,11 +2064,11 @@ public class ConcurrentHashMapV8<K, V>
      * are lagging additions.
      */
     private final void checkForResize() {
-        Node[] tab; int n, sc;
+        AtomicReferenceArray<Node> tab; int n, sc;
         while ((tab = table) != null &&
-                (n = tab.length) < MAXIMUM_CAPACITY &&
+                (n = tab.length()) < MAXIMUM_CAPACITY &&
                 (sc = sizeCtl) >= 0 && counter.sum() >= (long)sc &&
-                UNSAFE.compareAndSwapInt(this, sizeCtlOffset, sc, -1)) {
+                SIZE_CTRL_UPDATER.compareAndSet(this, sc, -1)) {
             try {
                 if (tab == table) {
                     table = rebuild(tab);
@@ -2098,13 +2090,13 @@ public class ConcurrentHashMapV8<K, V>
                 tableSizeFor(size + (size >>> 1) + 1);
         int sc;
         while ((sc = sizeCtl) >= 0) {
-            Node[] tab = table; int n;
-            if (tab == null || (n = tab.length) == 0) {
+            AtomicReferenceArray<Node> tab = table; int n;
+            if (tab == null || (n = tab.length()) == 0) {
                 n = (sc > c) ? sc : c;
-                if (UNSAFE.compareAndSwapInt(this, sizeCtlOffset, sc, -1)) {
+                if (SIZE_CTRL_UPDATER.compareAndSet(this, sc, -1)) {
                     try {
                         if (table == tab) {
-                            table = new Node[n];
+                            table = new AtomicReferenceArray<Node>(n);
                             sc = n - (n >>> 2);
                         }
                     } finally {
@@ -2114,7 +2106,7 @@ public class ConcurrentHashMapV8<K, V>
             }
             else if (c <= sc || n >= MAXIMUM_CAPACITY)
                 break;
-            else if (UNSAFE.compareAndSwapInt(this, sizeCtlOffset, sc, -1)) {
+            else if (SIZE_CTRL_UPDATER.compareAndSet(this, sc, -1)) {
                 try {
                     if (table == tab) {
                         table = rebuild(tab);
@@ -2133,9 +2125,9 @@ public class ConcurrentHashMapV8<K, V>
      *
      * @return the new table
      */
-    private static final Node[] rebuild(Node[] tab) {
-        int n = tab.length;
-        Node[] nextTab = new Node[n << 1];
+    private static final AtomicReferenceArray<Node> rebuild(AtomicReferenceArray<Node> tab) {
+        int n = tab.length();
+        AtomicReferenceArray<Node> nextTab = new AtomicReferenceArray<Node>(n << 1);
         Node fwd = new Node(MOVED, nextTab, null, null);
         int[] buffer = null;       // holds bins to revisit; null until needed
         Node rev = null;           // reverse forwarder; null until needed
@@ -2236,8 +2228,8 @@ public class ConcurrentHashMapV8<K, V>
      * Splits a normal bin with list headed by e into lo and hi parts;
      * installs in given table.
      */
-    private static void splitBin(Node[] nextTab, int i, Node e) {
-        int bit = nextTab.length >>> 1; // bit to split on
+    private static void splitBin(AtomicReferenceArray<Node> nextTab, int i, Node e) {
+        int bit = nextTab.length() >>> 1; // bit to split on
         int runBit = e.hash & bit;
         Node lastRun = e, lo = null, hi = null;
         for (Node p = e.next; p != null; p = p.next) {
@@ -2266,8 +2258,8 @@ public class ConcurrentHashMapV8<K, V>
     /**
      * Splits a tree bin into lo and hi parts; installs in given table.
      */
-    private static void splitTreeBin(Node[] nextTab, int i, TreeBin t) {
-        int bit = nextTab.length >>> 1;
+    private static void splitTreeBin(AtomicReferenceArray<Node> nextTab, int i, TreeBin t) {
+        int bit = nextTab.length() >>> 1;
         TreeBin lt = new TreeBin();
         TreeBin ht = new TreeBin();
         int lc = 0, hc = 0;
@@ -2309,8 +2301,8 @@ public class ConcurrentHashMapV8<K, V>
     private final void internalClear() {
         long delta = 0L; // negative number of deletions
         int i = 0;
-        Node[] tab = table;
-        while (tab != null && i < tab.length) {
+        AtomicReferenceArray<Node> tab = table;
+        while (tab != null && i < tab.length()) {
             int fh; Object fk;
             Node f = tabAt(tab, i);
             if (f == null)
@@ -2336,7 +2328,7 @@ public class ConcurrentHashMapV8<K, V>
                     }
                 }
                 else
-                    tab = (Node[])fk;
+                    tab = (AtomicReferenceArray<Node>)fk;
             }
             else if ((fh & LOCKED) != 0) {
                 counter.add(delta); // opportunistically update count
@@ -2419,7 +2411,7 @@ public class ConcurrentHashMapV8<K, V>
         Node next;           // the next entry to use
         Object nextKey;      // cached key field of next
         Object nextVal;      // cached val field of next
-        Node[] tab;          // current table; updated if resized
+        AtomicReferenceArray<Node> tab;          // current table; updated if resized
         int index;           // index of bin to use next
         int baseIndex;       // current index of initial table
         int baseLimit;       // index bound for initial table
@@ -2432,12 +2424,12 @@ public class ConcurrentHashMapV8<K, V>
 
         /** Creates iterator for split() methods */
         Traverser(Traverser<K,V,?> it) {
-            ConcurrentHashMapV8<K, V> m; Node[] t;
+            ConcurrentHashMapV8<K, V> m; AtomicReferenceArray<Node> t;
             if ((m = this.map = it.map) == null)
                 t = null;
             else if ((t = it.tab) == null && // force parent tab initialization
                     (t = it.tab = m.table) != null)
-                it.baseLimit = it.baseSize = t.length;
+                it.baseLimit = it.baseSize = t.length();
             this.tab = t;
             this.baseSize = it.baseSize;
             it.baseLimit = this.index = this.baseIndex =
@@ -2456,11 +2448,11 @@ public class ConcurrentHashMapV8<K, V>
                     e = e.next;
                 while (e == null) {             // get to next non-null bin
                     ConcurrentHashMapV8<K, V> m;
-                    Node[] t; int b, i, n; Object ek; // checks must use locals
+                    AtomicReferenceArray<Node> t; int b, i, n; Object ek; // checks must use locals
                     if ((t = tab) != null)
-                        n = t.length;
+                        n = t.length();
                     else if ((m = map) != null && (t = tab = m.table) != null)
-                        n = baseLimit = baseSize = t.length;
+                        n = baseLimit = baseSize = t.length();
                     else
                         break outer;
                     if ((b = baseIndex) >= baseLimit ||
@@ -2470,7 +2462,7 @@ public class ConcurrentHashMapV8<K, V>
                         if ((ek = e.key) instanceof TreeBin)
                             e = ((TreeBin)ek).first;
                         else {
-                            tab = (Node[])ek;
+                            tab = (AtomicReferenceArray<Node>)ek;
                             continue;           // restarts due to null val
                         }
                     }                           // visit upper slots if present
@@ -3355,7 +3347,7 @@ public class ConcurrentHashMapV8<K, V>
         s.defaultReadObject();
         this.segments = null; // unneeded
         // initialize transient final field
-        UNSAFE.putObjectVolatile(this, counterOffset, new LongAdder());
+        this.counter = new LongAdder();
 
         // Create all nodes, then place in table once size is known
         long size = 0L;
@@ -3383,11 +3375,11 @@ public class ConcurrentHashMapV8<K, V>
             int sc = sizeCtl;
             boolean collide = false;
             if (n > sc &&
-                    UNSAFE.compareAndSwapInt(this, sizeCtlOffset, sc, -1)) {
+                    SIZE_CTRL_UPDATER.compareAndSet(this, sc, -1)) {
                 try {
                     if (table == null) {
                         init = true;
-                        Node[] tab = new Node[n];
+                        AtomicReferenceArray<Node> tab = new AtomicReferenceArray<Node>(n);
                         int mask = n - 1;
                         while (p != null) {
                             int j = p.hash & mask;
@@ -3406,8 +3398,8 @@ public class ConcurrentHashMapV8<K, V>
                     sizeCtl = sc;
                 }
                 if (collide) { // rescan and convert to TreeBins
-                    Node[] tab = table;
-                    for (int i = 0; i < tab.length; ++i) {
+                    AtomicReferenceArray<Node> tab = table;
+                    for (int i = 0; i < tab.length(); ++i) {
                         int c = 0;
                         for (Node e = tabAt(tab, i); e != null; e = e.next) {
                             if (++c > TREE_THRESHOLD &&
@@ -3778,61 +3770,6 @@ public class ConcurrentHashMapV8<K, V>
             return ((o instanceof Set) &&
                     ((c = (Set<?>)o) == this ||
                             (containsAll(c) && c.containsAll(this))));
-        }
-    }
-
-    // Unsafe mechanics
-    private static final sun.misc.Unsafe UNSAFE;
-    private static final long counterOffset;
-    private static final long sizeCtlOffset;
-    private static final long ABASE;
-    private static final int ASHIFT;
-
-    static {
-        int ss;
-        try {
-            UNSAFE = getUnsafe();
-            Class<?> k = ConcurrentHashMapV8.class;
-            counterOffset = UNSAFE.objectFieldOffset
-                    (k.getDeclaredField("counter"));
-            sizeCtlOffset = UNSAFE.objectFieldOffset
-                    (k.getDeclaredField("sizeCtl"));
-            Class<?> sc = Node[].class;
-            ABASE = UNSAFE.arrayBaseOffset(sc);
-            ss = UNSAFE.arrayIndexScale(sc);
-        } catch (Exception e) {
-            throw new Error(e);
-        }
-        if ((ss & (ss-1)) != 0)
-            throw new Error("data type scale not a power of two");
-        ASHIFT = 31 - Integer.numberOfLeadingZeros(ss);
-    }
-
-    /**
-     * Returns a sun.misc.Unsafe.  Suitable for use in a 3rd party package.
-     * Replace with a simple call to Unsafe.getUnsafe when integrating
-     * into a jdk.
-     *
-     * @return a sun.misc.Unsafe
-     */
-    private static sun.misc.Unsafe getUnsafe() {
-        try {
-            return sun.misc.Unsafe.getUnsafe();
-        } catch (SecurityException se) {
-            try {
-                return java.security.AccessController.doPrivileged
-                        (new java.security
-                                .PrivilegedExceptionAction<sun.misc.Unsafe>() {
-                            public sun.misc.Unsafe run() throws Exception {
-                                java.lang.reflect.Field f = sun.misc
-                                        .Unsafe.class.getDeclaredField("theUnsafe");
-                                f.setAccessible(true);
-                                return (sun.misc.Unsafe) f.get(null);
-                            }});
-            } catch (java.security.PrivilegedActionException e) {
-                throw new RuntimeException("Could not initialize intrinsics",
-                        e.getCause());
-            }
         }
     }
 }

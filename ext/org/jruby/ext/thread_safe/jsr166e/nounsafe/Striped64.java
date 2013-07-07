@@ -7,7 +7,10 @@
 // This is based on 1.5 version.
 
 package org.jruby.ext.thread_safe.jsr166e.nounsafe;
+
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * A package-local class holding common representation and mechanics
@@ -90,24 +93,13 @@ abstract class Striped64 extends Number {
         volatile long p0, p1, p2, p3, p4, p5, p6;
         volatile long value;
         volatile long q0, q1, q2, q3, q4, q5, q6;
+
+        static AtomicLongFieldUpdater<Cell> VALUE_UPDATER = AtomicLongFieldUpdater.newUpdater(Cell.class, "value");
+
         Cell(long x) { value = x; }
 
         final boolean cas(long cmp, long val) {
-            return UNSAFE.compareAndSwapLong(this, valueOffset, cmp, val);
-        }
-
-        // Unsafe mechanics
-        private static final sun.misc.Unsafe UNSAFE;
-        private static final long valueOffset;
-        static {
-            try {
-                UNSAFE = getUnsafe();
-                Class<?> ak = Cell.class;
-                valueOffset = UNSAFE.objectFieldOffset
-                        (ak.getDeclaredField("value"));
-            } catch (Exception e) {
-                throw new Error(e);
-            }
+            return VALUE_UPDATER.compareAndSet(this, cmp, val);
         }
 
     }
@@ -159,6 +151,9 @@ abstract class Striped64 extends Number {
      */
     transient volatile int busy;
 
+    AtomicLongFieldUpdater<Striped64>    BASE_UPDATER = AtomicLongFieldUpdater.newUpdater(Striped64.class, "base");
+    AtomicIntegerFieldUpdater<Striped64> BUSY_UPDATER = AtomicIntegerFieldUpdater.newUpdater(Striped64.class, "busy");
+
     /**
      * Package-private default constructor
      */
@@ -169,14 +164,14 @@ abstract class Striped64 extends Number {
      * CASes the base field.
      */
     final boolean casBase(long cmp, long val) {
-        return UNSAFE.compareAndSwapLong(this, baseOffset, cmp, val);
+        return BASE_UPDATER.compareAndSet(this, cmp, val);
     }
 
     /**
      * CASes the busy field from 0 to 1 to acquire lock.
      */
     final boolean casBusy() {
-        return UNSAFE.compareAndSwapInt(this, busyOffset, 0, 1);
+        return BUSY_UPDATER.compareAndSet(this, 0, 1);
     }
 
     /**
@@ -293,50 +288,4 @@ abstract class Striped64 extends Number {
             }
         }
     }
-
-    // Unsafe mechanics
-    private static final sun.misc.Unsafe UNSAFE;
-    private static final long baseOffset;
-    private static final long busyOffset;
-    static {
-        try {
-            UNSAFE = getUnsafe();
-            Class<?> sk = Striped64.class;
-            baseOffset = UNSAFE.objectFieldOffset
-                    (sk.getDeclaredField("base"));
-            busyOffset = UNSAFE.objectFieldOffset
-                    (sk.getDeclaredField("busy"));
-        } catch (Exception e) {
-            throw new Error(e);
-        }
-    }
-
-    /**
-     * Returns a sun.misc.Unsafe.  Suitable for use in a 3rd party package.
-     * Replace with a simple call to Unsafe.getUnsafe when integrating
-     * into a jdk.
-     *
-     * @return a sun.misc.Unsafe
-     */
-    private static sun.misc.Unsafe getUnsafe() {
-        try {
-            return sun.misc.Unsafe.getUnsafe();
-        } catch (SecurityException se) {
-            try {
-                return java.security.AccessController.doPrivileged
-                        (new java.security
-                                .PrivilegedExceptionAction<sun.misc.Unsafe>() {
-                            public sun.misc.Unsafe run() throws Exception {
-                                java.lang.reflect.Field f = sun.misc
-                                        .Unsafe.class.getDeclaredField("theUnsafe");
-                                f.setAccessible(true);
-                                return (sun.misc.Unsafe) f.get(null);
-                            }});
-            } catch (java.security.PrivilegedActionException e) {
-                throw new RuntimeException("Could not initialize intrinsics",
-                        e.getCause());
-            }
-        }
-    }
-
 }
