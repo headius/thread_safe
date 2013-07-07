@@ -42,13 +42,21 @@ public class JRubyCacheBackendLibrary implements Library {
 
         private ConcurrentHashMap<IRubyObject, IRubyObject> map;
 
+        private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM(int initialCapacity, float loadFactor) {
+            return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+        }
+
+        private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM() {
+            return newCHM(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+        }
+
         public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
             super(runtime, klass);
         }
 
         @JRubyMethod
         public IRubyObject initialize(ThreadContext context) {
-            map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
+            map = newCHM();
             return context.getRuntime().getNil();
         }
 
@@ -58,16 +66,16 @@ public class JRubyCacheBackendLibrary implements Library {
             return context.getRuntime().getNil();
         }
 
-        private ConcurrentHashMapV8<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
+        private ConcurrentHashMap<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
             Ruby runtime = context.getRuntime();
             if (!options.isNil() && options.respondsTo("[]")) {
                 IRubyObject rInitialCapacity = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
                 IRubyObject rLoadFactor      = options.callMethod(context, "[]", runtime.newSymbol("load_factor"));
                 int initialCapacity = !rInitialCapacity.isNil() ? RubyNumeric.num2int(rInitialCapacity.convertToInteger()) : DEFAULT_INITIAL_CAPACITY;
                 float loadFactor    = !rLoadFactor.isNil() ?      (float)RubyNumeric.num2dbl(rLoadFactor.convertToFloat()) : DEFAULT_LOAD_FACTOR;
-                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+                return newCHM(initialCapacity, loadFactor);
             } else {
-                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
+                return newCHM();
             }
         }
 
@@ -194,7 +202,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod(visibility = PRIVATE)
         public JRubyCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
-            this.map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
+            map = newCHM();
             return this;
         }
     }
