@@ -8,10 +8,12 @@ if defined?(JRUBY_VERSION)
   require 'ant'
 
   directory "pkg/classes"
+  directory 'pkg/tests'
 
   desc "Clean up build artifacts"
   task :clean do
     rm_rf "pkg/classes"
+    rm_rf "pkg/tests"
     rm_rf "lib/thread_safe/jruby_cache_backend.jar"
   end
 
@@ -27,7 +29,15 @@ if defined?(JRUBY_VERSION)
     ant.jar :basedir => "pkg/classes", :destfile => "lib/thread_safe/jruby_cache_backend.jar", :includes => "**/*.class"
   end
 
-  task :package => :jar
+  desc "Build test jar"
+  task 'test-jar' => 'pkg/tests' do |t|
+    ant.javac :srcdir => 'test/src', :destdir => t.prerequisites.first,
+      :source => "1.5", :target => "1.5", :debug => true
+
+    ant.jar :basedir => 'pkg/tests', :destfile => 'test/package.jar', :includes => '**/*.class'
+  end
+
+  task :package => [ :jar, 'test-jar' ]
 else
   # No need to package anything for non-jruby rubies
   task :package
