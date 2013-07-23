@@ -4,11 +4,6 @@ require 'rake/testtask'
 
 task :default => :test
 
-Rake::TestTask.new :test do |t|
-  t.libs << "lib"
-  t.test_files = FileList["test/**/*.rb"]
-end
-
 if defined?(JRUBY_VERSION)
   require 'ant'
 
@@ -33,4 +28,14 @@ if defined?(JRUBY_VERSION)
   end
 
   task :package => :jar
+else
+  # No need to package anything for non-jruby rubies
+  task :package
 end
+
+Rake::TestTask.new :test => :package do |t|
+  t.libs << "lib"
+  t.test_files = FileList["test/**/*.rb"]
+end
+
+
