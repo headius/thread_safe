@@ -41,6 +41,9 @@ module ThreadSafe
       end
     end
 
+    alias_method :get, :[]
+    alias_method :put, :[]=
+
     def fetch(key, default_value = NULL)
       if NULL != (value = get_or_default(key, NULL))
         value

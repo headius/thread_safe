@@ -29,8 +29,10 @@ class TestCache < Test::Unit::TestCase
   def test_retrieval
     assert_size_change 1 do
       assert_equal nil, @cache[:a]
+      assert_equal nil, @cache.get(:a)
       @cache[:a] = 1
       assert_equal 1,   @cache[:a]
+      assert_equal 1,   @cache.get(:a)
     end
   end
 
