@@ -1,5 +1,31 @@
 require 'thread'
 
+if defined?(JRUBY_VERSION) && ENV['TEST_NO_UNSAFE']
+  # to be used like this: rake test TEST_NO_UNSAFE=true
+  require 'test/package.jar'
+  java_import 'thread_safe.SecurityManager'
+  manager = SecurityManager.new
+
+  # Prevent accessing internal classes
+  manager.deny java.lang.RuntimePermission.new("accessClassInPackage.sun.misc")
+  java.lang.System.setSecurityManager manager
+
+  class TestNoUnsafe < Test::Unit::TestCase
+    def test_security_manager_is_used
+      begin
+        java_import 'sun.misc.Unsafe'
+        flunk
+      rescue SecurityError
+      end
+    end
+
+    def test_no_unsafe_version_of_chmv8_is_used
+      require 'thread_safe/jruby_cache_backend' # make sure the jar has been loaded
+      assert !Java::OrgJrubyExtThread_safe::JRubyCacheBackendLibrary::JRubyCacheBackend::CAN_USE_UNSAFE_CHM
+    end
+  end
+end
+
 module ThreadSafe
   module Test
     class Latch

@@ -41,7 +41,7 @@ public class JRubyCacheBackendLibrary implements Library {
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-        static final boolean CAN_USE_UNSAFE_CHM = canUseUnsafeCHM();
+        public static final boolean CAN_USE_UNSAFE_CHM = canUseUnsafeCHM();
 
         private ConcurrentHashMap<IRubyObject, IRubyObject> map;
 
