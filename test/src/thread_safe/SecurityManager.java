@@ -11,7 +11,6 @@ public class SecurityManager extends java.lang.SecurityManager {
   @Override
   public void checkPermission(Permission p) {
     if (deniedPermissions.contains(p)) {
-      System.out.println("Denying " + p);
       throw new SecurityException("Denied!");
     }
   }

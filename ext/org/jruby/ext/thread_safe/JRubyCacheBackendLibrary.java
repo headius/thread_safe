@@ -62,11 +62,22 @@ public class JRubyCacheBackendLibrary implements Library {
                 new org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8(); // force class load and initialization
                 return true;
             } catch (Throwable t) { // ensuring we really do catch everything
-                if (t.getMessage().indexOf("Could not initialize intrinsics") == -1) { // Doug's Unsafe setup errors always have this message
-                    throw (t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t));
+                // Doug's Unsafe setup errors always have this "Could not ini.." message
+                if (t.getMessage().contains("Could not initialize intrinsics") || isCausedBySecurityException(t)) {
+                    return false;
                 }
-                return false;
+                throw (t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t));
             }
+        }
+
+        private static boolean isCausedBySecurityException(Throwable t) {
+            while (t != null) {
+                if (t instanceof SecurityException) {
+                    return true;
+                }
+                t = t.getCause();
+            }
+            return false;
         }
 
         public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
