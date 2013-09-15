@@ -18,7 +18,7 @@ Or install it yourself as:
 
 ## Usage
 
-```
+```ruby
 require 'thread_safe'
 
 sa = ThreadSafe::Array.new # supports standard Array.new forms
