@@ -21,7 +21,7 @@ unless defined?(SynchronizedDelegator)
       super
       @mutex = Mutex.new
     end
-    
+
     def method_missing(m, *args, &block)
       begin
         mutex = @mutex

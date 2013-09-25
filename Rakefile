@@ -37,5 +37,3 @@ Rake::TestTask.new :test => :package do |t|
   t.libs << "lib"
   t.test_files = FileList["test/**/*.rb"]
 end
-
-

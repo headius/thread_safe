@@ -17,7 +17,7 @@ import static org.jruby.runtime.Visibility.PRIVATE;
 
 /**
  * Native Java implementation to avoid the JI overhead.
- * 
+ *
  * @author thedarkone
  */
 public class JRubyCacheBackendLibrary implements Library {
@@ -26,7 +26,7 @@ public class JRubyCacheBackendLibrary implements Library {
         jrubyRefClass.setAllocator(BACKEND_ALLOCATOR);
         jrubyRefClass.defineAnnotatedMethods(JRubyCacheBackend.class);
     }
-    
+
     private static final ObjectAllocator BACKEND_ALLOCATOR = new ObjectAllocator() {
         public IRubyObject allocate(Ruby runtime, RubyClass klazz) {
             return new JRubyCacheBackend(runtime, klazz);
