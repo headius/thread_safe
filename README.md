@@ -1,5 +1,7 @@
 # Threadsafe
 
+[![Build Status](https://travis-ci.org/headius/thread_safe.png)](https://travis-ci.org/headius/thread_safe)
+
 A collection of thread-safe versions of common core Ruby classes.
 
 ## Installation
@@ -28,7 +30,10 @@ sh = ThreadSafe::Hash.new # supports standard Hash.new forms
 ## Contributing
 
 1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Added some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
+2. Clone it (`git clone git@github.com:you/thread_safe.git`)
+3. Create your feature branch (`git checkout -b my-new-feature`)
+4. Build the jar (`rake jar`) NOTE: Requires JRuby
+5. Install dependencies (`bundle install`)
+6. Commit your changes (`git commit -am 'Added some feature'`)
+7. Push to the branch (`git push origin my-new-feature`)
+8. Create new Pull Request

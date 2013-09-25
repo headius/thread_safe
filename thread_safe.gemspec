@@ -18,4 +18,5 @@ Gem::Specification.new do |gem|
   gem.license       = "Apache-2.0"
 
   gem.add_dependency 'atomic'
+  gem.add_development_dependency 'rake'
 end

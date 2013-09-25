@@ -4,7 +4,7 @@ module ThreadSafe
     #
     # The previous implementation used `Thread.critical` on 1.8 MRI to implement the 4 composed atomic operations (`put_if_absent`, `replace_pair`,
     # `replace_if_exists`, `delete_pair`) this however doesn't work for `compute_if_absent` because on 1.8 the Mutex class is itself implemented
-    # via `Thread.critical` and a call to `Mutex#lock` does not restore the previous `Thread.critical` value (thus any synchronisation clears the 
+    # via `Thread.critical` and a call to `Mutex#lock` does not restore the previous `Thread.critical` value (thus any synchronisation clears the
     # `Thread.critical` flag and we loose control). This poses a problem as the provided block might use synchronisation on its own.
     #
     # NOTE: a neat idea of writing a c-ext to manually perform atomic put_if_absent, while relying on Ruby not releasing a GVL while calling
