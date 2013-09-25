@@ -1,5 +1,7 @@
 # Threadsafe
 
+[![Build Status](https://travis-ci.org/headius/thread_safe.png)](https://travis-ci.org/headius/thread_safe)
+
 A collection of thread-safe versions of common core Ruby classes.
 
 ## Installation
