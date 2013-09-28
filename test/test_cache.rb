@@ -290,17 +290,21 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_collision_resistance
-    keys = (0..1000).map {|i| ThreadSafe::Test::HashCollisionKey(i, 1)}
-    keys.each {|k| @cache[k] = k.key}
-    10.times do |i|
-      size = keys.size
-      while i < size
-        k = keys[i]
-        assert(k.key == @cache.delete(k) && !@cache.key?(k) && (@cache[k] = k.key; @cache[k] == k.key))
-        i += 10
+    assert_collision_resistance((0..1000).map {|i| ThreadSafe::Test::HashCollisionKey(i, 1)})
+  end
+
+  def test_collision_resistance_with_arrays
+    special_array_class = Class.new(Array) do
+      def key # assert_collision_resistance expects to be able to call .key to get the "real" key
+        first.key
       end
     end
-    assert(keys.all? {|k| @cache[k] == k.key})
+    # Test collision resistance with a keys that say they responds_to <=>, but then raise exceptions
+    # when actually called (ie: an Array filled with non-comparable keys).
+    # See https://github.com/headius/thread_safe/issues/19 for more info.
+    assert_collision_resistance((0..100).map do |i|
+      special_array_class.new([ThreadSafe::Test::HashCollisionKeyNonComparable.new(i, 1)])
+    end)
   end
 
   def test_replace_pair
@@ -790,5 +794,18 @@ class TestCache < Test::Unit::TestCase
       yield
     end
     assert_equal expected_result, result
+  end
+
+  def assert_collision_resistance(keys)
+    keys.each {|k| @cache[k] = k.key}
+    10.times do |i|
+      size = keys.size
+      while i < size
+        k = keys[i]
+        assert(k.key == @cache.delete(k) && !@cache.key?(k) && (@cache[k] = k.key; @cache[k] == k.key))
+        i += 10
+      end
+    end
+    assert(keys.all? {|k| @cache[k] == k.key})
   end
 end

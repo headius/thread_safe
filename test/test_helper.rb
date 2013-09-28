@@ -95,5 +95,9 @@ module ThreadSafe
     def self.HashCollisionKey(key, hash = key.hash % 3)
       HASH_COLLISION_CLASSES[rand(4)].new(key, hash)
     end
+
+    class HashCollisionKeyNonComparable < HashCollisionKey
+      undef <=>
+    end
   end
 end
