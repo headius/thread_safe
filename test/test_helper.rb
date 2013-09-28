@@ -92,8 +92,8 @@ module ThreadSafe
 
     HASH_COLLISION_CLASSES = [HashCollisionKey, HashCollisionKey2, HashCollisionKeyNoCompare, HashCollisionKey4]
 
-    def self.HashCollisionKey(key)
-      HASH_COLLISION_CLASSES[rand(4)].new(key)
+    def self.HashCollisionKey(key, hash = key.hash % 3)
+      HASH_COLLISION_CLASSES[rand(4)].new(key, hash)
     end
   end
 end
