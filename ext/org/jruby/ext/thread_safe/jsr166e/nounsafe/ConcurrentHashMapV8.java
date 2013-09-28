@@ -541,8 +541,11 @@ public class ConcurrentHashMapV8<K, V>
      * The bin count threshold for using a tree rather than list for a
      * bin.  The value reflects the approximate break-even point for
      * using tree-based operations.
+     * Note that Doug's version defaults to 8, but when dealing with
+     * Ruby objects it is actually beneficial to avoid TreeNodes
+     * as long as possible as it usually means going into Ruby land.
      */
-    private static final int TREE_THRESHOLD = 8;
+    private static final int TREE_THRESHOLD = 16;
 
     /*
      * Encodings for special uses of Node hash fields. See above for
