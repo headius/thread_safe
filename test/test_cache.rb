@@ -290,7 +290,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_collision_resistance
-    keys = (0..1000).map {|i| ThreadSafe::Test::HashCollisionKey.new(i, 1)}
+    keys = (0..1000).map {|i| ThreadSafe::Test::HashCollisionKey(i, 1)}
     keys.each {|k| @cache[k] = k.key}
     10.times do |i|
       size = keys.size
