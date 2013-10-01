@@ -6,7 +6,8 @@
 
 // This is based on 1.9 version.
 
-package org.jruby.ext.thread_safe.jsr166e;
+package org.jruby.ext.thread_safe.jsr166e.nounsafe;
+
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.IOException;
 import java.io.Serializable;
