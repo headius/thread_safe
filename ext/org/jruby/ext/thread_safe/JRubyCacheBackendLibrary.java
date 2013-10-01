@@ -142,7 +142,7 @@ public class JRubyCacheBackendLibrary implements Library {
             IRubyObject result = map.computeIfPresent(key, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
-                    IRubyObject result = block.yieldSpecific(context, oldValue);
+                    IRubyObject result = block.yieldSpecific(context, oldValue == null ? context.getRuntime().getNil() : oldValue);
                     return result.isNil() ? null : result;
                 }
             });
@@ -154,7 +154,7 @@ public class JRubyCacheBackendLibrary implements Library {
             IRubyObject result = map.compute(key, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
-                    IRubyObject result = block.yieldSpecific(context, oldValue);
+                    IRubyObject result = block.yieldSpecific(context, oldValue == null ? context.getRuntime().getNil() : oldValue);
                     return result.isNil() ? null : result;
                 }
             });
@@ -166,7 +166,7 @@ public class JRubyCacheBackendLibrary implements Library {
             IRubyObject result = map.merge(key, value, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject oldValue, IRubyObject newValue) {
-                    IRubyObject result = block.yieldSpecific(context, oldValue);
+                    IRubyObject result = block.yieldSpecific(context, oldValue == null ? context.getRuntime().getNil() : oldValue);
                     return result.isNil() ? null : result;
                 }
             });
