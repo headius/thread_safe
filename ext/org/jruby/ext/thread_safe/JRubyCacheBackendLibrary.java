@@ -3,7 +3,9 @@ package org.jruby.ext.thread_safe;
 import org.jruby.*;
 import org.jruby.anno.JRubyClass;
 import org.jruby.anno.JRubyMethod;
+import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMap;
 import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8;
+import org.jruby.ext.thread_safe.jsr166e.nounsafe.*;
 import org.jruby.runtime.Block;
 import org.jruby.runtime.ObjectAllocator;
 import org.jruby.runtime.ThreadContext;
@@ -39,7 +41,44 @@ public class JRubyCacheBackendLibrary implements Library {
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
 
-        private ConcurrentHashMapV8<IRubyObject, IRubyObject> map;
+        public static final boolean CAN_USE_UNSAFE_CHM = canUseUnsafeCHM();
+
+        private ConcurrentHashMap<IRubyObject, IRubyObject> map;
+
+        private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM(int initialCapacity, float loadFactor) {
+            if (CAN_USE_UNSAFE_CHM) {
+                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+            } else {
+                return new org.jruby.ext.thread_safe.jsr166e.nounsafe.ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+            }
+        }
+
+        private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM() {
+            return newCHM(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+        }
+
+        private static boolean canUseUnsafeCHM() {
+            try {
+                new org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMapV8(); // force class load and initialization
+                return true;
+            } catch (Throwable t) { // ensuring we really do catch everything
+                // Doug's Unsafe setup errors always have this "Could not ini.." message
+                if (t.getMessage().contains("Could not initialize intrinsics") || isCausedBySecurityException(t)) {
+                    return false;
+                }
+                throw (t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t));
+            }
+        }
+
+        private static boolean isCausedBySecurityException(Throwable t) {
+            while (t != null) {
+                if (t instanceof SecurityException) {
+                    return true;
+                }
+                t = t.getCause();
+            }
+            return false;
+        }
 
         public JRubyCacheBackend(Ruby runtime, RubyClass klass) {
             super(runtime, klass);
@@ -47,7 +86,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject initialize(ThreadContext context) {
-            map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
+            map = newCHM();
             return context.getRuntime().getNil();
         }
 
@@ -57,16 +96,16 @@ public class JRubyCacheBackendLibrary implements Library {
             return context.getRuntime().getNil();
         }
 
-        private ConcurrentHashMapV8<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
+        private ConcurrentHashMap<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
             Ruby runtime = context.getRuntime();
             if (!options.isNil() && options.respondsTo("[]")) {
                 IRubyObject rInitialCapacity = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
                 IRubyObject rLoadFactor      = options.callMethod(context, "[]", runtime.newSymbol("load_factor"));
                 int initialCapacity = !rInitialCapacity.isNil() ? RubyNumeric.num2int(rInitialCapacity.convertToInteger()) : DEFAULT_INITIAL_CAPACITY;
                 float loadFactor    = !rLoadFactor.isNil() ?      (float)RubyNumeric.num2dbl(rLoadFactor.convertToFloat()) : DEFAULT_LOAD_FACTOR;
-                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+                return newCHM(initialCapacity, loadFactor);
             } else {
-                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
+                return newCHM();
             }
         }
 
@@ -90,7 +129,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute_if_absent(final ThreadContext context, final IRubyObject key, final Block block) {
-            return map.computeIfAbsent(key, new ConcurrentHashMapV8.Fun<IRubyObject, IRubyObject>() {
+            return map.computeIfAbsent(key, new ConcurrentHashMap.Fun<IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key) {
                     return block.yieldSpecific(context);
@@ -100,7 +139,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute_if_present(final ThreadContext context, final IRubyObject key, final Block block) {
-            IRubyObject result = map.computeIfPresent(key, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+            IRubyObject result = map.computeIfPresent(key, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
                     IRubyObject result = block.yieldSpecific(context, oldValue);
@@ -112,7 +151,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject compute(final ThreadContext context, final IRubyObject key, final Block block) {
-            IRubyObject result = map.compute(key, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+            IRubyObject result = map.compute(key, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject key, IRubyObject oldValue) {
                     IRubyObject result = block.yieldSpecific(context, oldValue);
@@ -124,7 +163,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod
         public IRubyObject merge_pair(final ThreadContext context, final IRubyObject key, final IRubyObject value, final Block block) {
-            IRubyObject result = map.merge(key, value, new ConcurrentHashMapV8.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
+            IRubyObject result = map.merge(key, value, new ConcurrentHashMap.BiFun<IRubyObject, IRubyObject, IRubyObject>() {
                 @Override
                 public IRubyObject apply(IRubyObject oldValue, IRubyObject newValue) {
                     IRubyObject result = block.yieldSpecific(context, oldValue);
@@ -193,7 +232,7 @@ public class JRubyCacheBackendLibrary implements Library {
 
         @JRubyMethod(visibility = PRIVATE)
         public JRubyCacheBackend initialize_copy(ThreadContext context, IRubyObject other) {
-            this.map = new ConcurrentHashMapV8<IRubyObject, IRubyObject>();
+            map = newCHM();
             return this;
         }
     }
