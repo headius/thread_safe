@@ -29,7 +29,7 @@ class TestSynchronizedDelegator < Test::Unit::TestCase
       Thread.pass until t2_continue
       sync_ary << 2
     end
-    
+
     Thread.pass until t2.status == 'sleep'
     assert_equal 1, ary.size
 

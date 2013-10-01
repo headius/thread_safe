@@ -1,11 +1,11 @@
 #!/usr/bin/env rake
 require "bundler/gem_tasks"
-require 'rake/testtask'
+require "rake/testtask"
 
 task :default => :test
 
 if defined?(JRUBY_VERSION)
-  require 'ant'
+  require "ant"
 
   directory "pkg/classes"
 
@@ -37,5 +37,3 @@ Rake::TestTask.new :test => :package do |t|
   t.libs << "lib"
   t.test_files = FileList["test/**/*.rb"]
 end
-
-

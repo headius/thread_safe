@@ -1,7 +1,7 @@
 package thread_safe;
 
 import java.io.IOException;
-        
+
 import org.jruby.Ruby;
 import org.jruby.ext.thread_safe.JRubyCacheBackendLibrary;
 import org.jruby.runtime.load.BasicLibraryService;
