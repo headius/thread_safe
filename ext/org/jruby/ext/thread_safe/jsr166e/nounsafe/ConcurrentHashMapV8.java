@@ -11,6 +11,7 @@ package org.jruby.ext.thread_safe.jsr166e.nounsafe;
 import org.jruby.RubyClass;
 import org.jruby.RubyNumeric;
 import org.jruby.RubyObject;
+import org.jruby.exceptions.RaiseException;
 import org.jruby.ext.thread_safe.jsr166e.ConcurrentHashMap;
 import org.jruby.ext.thread_safe.jsr166y.ThreadLocalRandom;
 import org.jruby.runtime.ThreadContext;
@@ -540,8 +541,11 @@ public class ConcurrentHashMapV8<K, V>
      * The bin count threshold for using a tree rather than list for a
      * bin.  The value reflects the approximate break-even point for
      * using tree-based operations.
+     * Note that Doug's version defaults to 8, but when dealing with
+     * Ruby objects it is actually beneficial to avoid TreeNodes
+     * as long as possible as it usually means going into Ruby land.
      */
-    private static final int TREE_THRESHOLD = 8;
+    private static final int TREE_THRESHOLD = 16;
 
     /*
      * Encodings for special uses of Node hash fields. See above for
@@ -864,9 +868,18 @@ public class ConcurrentHashMapV8<K, V>
 
         int rubyCompare(RubyObject l, RubyObject r) {
             ThreadContext context = l.getMetaClass().getRuntime().getCurrentContext();
-            IRubyObject result = l.callMethod(context, "<=>", r);
-            int res = result.isNil() ? 0 : RubyNumeric.num2int(result.convertToInteger());
-            return res;
+            IRubyObject result;
+            try {
+                result = l.callMethod(context, "<=>", r);
+            } catch (RaiseException e) {
+                // handle objects "lying" about responding to <=>, ie: an Array containing non-comparable keys
+                if (context.runtime.getNoMethodError().isInstance(e.getException())) {
+                    return 0;
+                }
+                throw e;
+            }
+
+            return result.isNil() ? 0 : RubyNumeric.num2int(result.convertToInteger());
         }
 
         /**
