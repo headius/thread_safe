@@ -9,7 +9,6 @@ class TestHash < Test::Unit::TestCase
         Thread.new do
           1000.times do |j|
             hsh[i*1000+j] = i
-            hsh.each {|k,v| k + v}
             hsh[i*1000+j]
             hsh.delete(i*1000+j)
           end
