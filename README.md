@@ -27,6 +27,15 @@ sa = ThreadSafe::Array.new # supports standard Array.new forms
 sh = ThreadSafe::Hash.new # supports standard Hash.new forms
 ```
 
+`ThreadSafe::Cache` also exists, as a hash-like object, and should have
+much better performance characteristics under concurrency than
+`ThreadSafe::Hash`. However, `ThreadSafe::Cache` is not strictly semantically
+equivalent to ruby Hash -- for instance, it does not neccesarily ordered by
+insertion time as Hash is. For most uses it should do fine though, and we
+recommend you consider `ThreadSafe::Cache` instead of `ThreadSafe::Hash` for your
+concurrency-safe hash needs. 
+
+
 ## Contributing
 
 1. Fork it
