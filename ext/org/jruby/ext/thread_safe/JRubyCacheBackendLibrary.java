@@ -40,21 +40,22 @@ public class JRubyCacheBackendLibrary implements Library {
         // Defaults used by the CHM
         static final int DEFAULT_INITIAL_CAPACITY = 16;
         static final float DEFAULT_LOAD_FACTOR = 0.75f;
+        static final int DEFAULT_CONCURRENCY_LEVEL = 16;
 
         public static final boolean CAN_USE_UNSAFE_CHM = canUseUnsafeCHM();
 
         private ConcurrentHashMap<IRubyObject, IRubyObject> map;
 
-        private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM(int initialCapacity, float loadFactor) {
+        private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM(int initialCapacity, float loadFactor, int concurrencyLevel) {
             if (CAN_USE_UNSAFE_CHM) {
-                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+                return new ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor, concurrencyLevel);
             } else {
-                return new org.jruby.ext.thread_safe.jsr166e.nounsafe.ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor);
+                return new org.jruby.ext.thread_safe.jsr166e.nounsafe.ConcurrentHashMapV8<IRubyObject, IRubyObject>(initialCapacity, loadFactor, concurrencyLevel);
             }
         }
 
         private static ConcurrentHashMap<IRubyObject, IRubyObject> newCHM() {
-            return newCHM(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+            return newCHM(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
         }
 
         private static boolean canUseUnsafeCHM() {
@@ -97,13 +98,18 @@ public class JRubyCacheBackendLibrary implements Library {
         }
 
         private ConcurrentHashMap<IRubyObject, IRubyObject> toCHM(ThreadContext context, IRubyObject options) {
-            Ruby runtime = context.getRuntime();
+            final Ruby runtime = context.getRuntime();
             if (!options.isNil() && options.respondsTo("[]")) {
-                IRubyObject rInitialCapacity = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
-                IRubyObject rLoadFactor      = options.callMethod(context, "[]", runtime.newSymbol("load_factor"));
-                int initialCapacity = !rInitialCapacity.isNil() ? RubyNumeric.num2int(rInitialCapacity.convertToInteger()) : DEFAULT_INITIAL_CAPACITY;
-                float loadFactor    = !rLoadFactor.isNil() ?      (float)RubyNumeric.num2dbl(rLoadFactor.convertToFloat()) : DEFAULT_LOAD_FACTOR;
-                return newCHM(initialCapacity, loadFactor);
+                IRubyObject initial_capacity = options.callMethod(context, "[]", runtime.newSymbol("initial_capacity"));
+                final int initialCapacity = ! initial_capacity.isNil() ?
+                    RubyNumeric.num2int(initial_capacity.convertToInteger()) : DEFAULT_INITIAL_CAPACITY;
+                IRubyObject load_factor = options.callMethod(context, "[]", runtime.newSymbol("load_factor"));
+                final float loadFactor = ! load_factor.isNil() ?
+                    (float) RubyNumeric.num2dbl(load_factor.convertToFloat()) : DEFAULT_LOAD_FACTOR;
+                IRubyObject concurrency_level = options.callMethod(context, "[]", runtime.newSymbol("concurrency_level"));
+                final int concurrencyLevel = ! concurrency_level.isNil() ?
+                    RubyNumeric.num2int(concurrency_level.convertToInteger()) : DEFAULT_CONCURRENCY_LEVEL;
+                return newCHM(initialCapacity, loadFactor, concurrencyLevel);
             } else {
                 return newCHM();
             }
