@@ -36,7 +36,7 @@ class TestSynchronizedDelegator < Test::Unit::TestCase
       sync_hash[4] = '42'
     end
 
-    sleep(0.05) # sleep some to allow threads to boot up
+    sleep(0.05) # sleep some to allow threads to boot
 
     until t2.status == 'sleep' do
       Thread.pass
@@ -79,6 +79,6 @@ class TestSynchronizedDelegator < Test::Unit::TestCase
     t1.join; t2.join
 
     assert_equal [1, 2], array
-  end if RUBY_VERSION !~ /1\.8/
+  end
 
 end

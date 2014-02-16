@@ -17,9 +17,8 @@ require 'delegate'
 class SynchronizedDelegator < SimpleDelegator
 
   def initialize(obj)
-    super # __setobj__(obj)
+    __setobj__(obj)
     @mutex = Mutex.new
-    undef_cached_methods!
   end
 
   def method_missing(method, *args, &block)
@@ -32,44 +31,21 @@ class SynchronizedDelegator < SimpleDelegator
     end
   end
 
-  private
-
-  if RUBY_VERSION[0, 3] == '1.8'
-
-    def singleton_class
-      class << self; self end
-    end unless respond_to?(:singleton_class)
-
-    # The 1.8 delegator library does (instance) "eval" all methods
-    # delegated on {#initialize}.
-    # @see http://rubydoc.info/stdlib/delegate/1.8.7/Delegator
-    # @private
-    def undef_cached_methods!
-      self_class = singleton_class
-      for method in self_class.instance_methods(false)
-        self_class.send :undef_method, method
+  # Work-around for 1.8 std-lib not passing block around to delegate.
+  # @private
+  def method_missing(method, *args, &block)
+    mutex = @mutex
+    begin
+      mutex.lock
+      target = self.__getobj__
+      if target.respond_to?(method)
+        target.__send__(method, *args, &block)
+      else
+        super(method, *args, &block)
       end
+    ensure
+      mutex.unlock
     end
-
-    # JRuby 1.8 mode stdlib internals - caching generated modules
-    # methods under `Delegator::DelegatorModules` based on class.
-    # @private
-    def undef_cached_methods!
-      gen_mod = DelegatorModules[[__getobj__.class, self.class]]
-      if gen_mod && singleton_class.include?(gen_mod)
-        self_class = singleton_class
-        for method in gen_mod.instance_methods(false)
-          self_class.send :undef_method, method
-        end
-      end
-    end if constants.include?('DelegatorModules')
-
-  else
-
-    # Nothing to do since 1.9 {#method_missing} will get called.
-    # @private
-    def undef_cached_methods!; end
-
-  end
+  end if RUBY_VERSION[0, 3] == '1.8'
 
 end unless defined?(SynchronizedDelegator)
