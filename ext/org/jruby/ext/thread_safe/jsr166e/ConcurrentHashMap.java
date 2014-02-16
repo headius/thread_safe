@@ -25,4 +25,7 @@ public interface ConcurrentHashMap<K, V> {
     public Set<Map.Entry<K,V>> entrySet();
     public int size();
     public V getValueOrDefault(Object key, V defaultValue);
+
+    public boolean containsValue(V value);
+    public K findKey(V value);
 }

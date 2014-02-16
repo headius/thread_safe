@@ -178,9 +178,15 @@ public class JRubyCacheBackendLibrary implements Library {
             return getRuntime().newBoolean(map.replace(key, oldValue, newValue));
         }
 
-        @JRubyMethod(name = {"key?"}, required = 1)
+        @JRubyMethod(name = "key?", required = 1)
         public RubyBoolean has_key_p(IRubyObject key) {
             return map.containsKey(key) ? getRuntime().getTrue() : getRuntime().getFalse();
+        }
+
+        @JRubyMethod
+        public IRubyObject key(IRubyObject value) {
+            final IRubyObject key = map.findKey(value);
+            return key == null ? getRuntime().getNil() : key;
         }
 
         @JRubyMethod
