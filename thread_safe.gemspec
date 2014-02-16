@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
-require File.expand_path('../lib/thread_safe/version', __FILE__)
+$:.push File.expand_path('../lib', __FILE__) unless $:.include?('lib')
+require 'thread_safe/version'
 
 Gem::Specification.new do |gem|
   gem.authors       = ["Charles Oliver Nutter", "thedarkone"]
