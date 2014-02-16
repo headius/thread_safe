@@ -2422,8 +2422,8 @@ public class ConcurrentHashMapV8<K, V>
     @SuppressWarnings("serial") static class Traverser<K,V,R> {
         final ConcurrentHashMapV8<K, V> map;
         Node next;           // the next entry to use
-        Object nextKey;      // cached key field of next
-        Object nextVal;      // cached val field of next
+        K nextKey;      // cached key field of next
+        V nextVal;      // cached val field of next
         AtomicReferenceArray<Node> tab;          // current table; updated if resized
         int index;           // index of bin to use next
         int baseIndex;       // current index of initial table
@@ -2453,9 +2453,9 @@ public class ConcurrentHashMapV8<K, V>
          * Advances next; returns nextVal or null if terminated.
          * See above for explanation.
          */
-        final Object advance() {
+        final V advance() {
             Node e = next;
-            Object ev = null;
+            V ev = null;
             outer: do {
                 if (e != null)                  // advance past used/skipped node
                     e = e.next;
@@ -2481,8 +2481,8 @@ public class ConcurrentHashMapV8<K, V>
                     }                           // visit upper slots if present
                     index = (i += baseSize) < n ? i : (baseIndex = b + 1);
                 }
-                nextKey = e.key;
-            } while ((ev = e.val) == null);    // skip deleted or special nodes
+                nextKey = (K) e.key;
+            } while ((ev = (V) e.val) == null);    // skip deleted or special nodes
             next = e;
             return nextVal = ev;
         }
@@ -2720,6 +2720,18 @@ public class ConcurrentHashMapV8<K, V>
                 return true;
         }
         return false;
+    }
+
+    public K findKey(Object value) {
+        if (value == null)
+            throw new NullPointerException();
+        Object v;
+        Traverser<K,V,Object> it = new Traverser<K,V,Object>(this);
+        while ((v = it.advance()) != null) {
+            if (v == value || value.equals(v))
+                return it.nextKey;
+        }
+        return null;
     }
 
     /**
