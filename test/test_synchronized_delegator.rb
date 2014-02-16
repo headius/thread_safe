@@ -2,41 +2,83 @@ require 'test/unit'
 require 'thread_safe/synchronized_delegator.rb'
 
 class TestSynchronizedDelegator < Test::Unit::TestCase
-  def test_wraps_array
-    ary = []
-    sync_ary = SynchronizedDelegator.new(ary)
 
-    ary << 1
-    assert_equal 1, sync_ary[0]
+  def test_wraps_array
+    sync_array = SynchronizedDelegator.new(array = [])
+
+    array << 1
+    assert_equal 1, sync_array[0]
+
+    sync_array << 2
+    assert_equal 2, array[1]
   end
 
   def test_synchronizes_access
-    ary = []
-    sync_ary = SynchronizedDelegator.new(ary)
+    t1_continue, t2_continue = false, false
 
-    t1_continue = false
-    t2_continue = false
+    hash = Hash.new do |hash, key|
+      t2_continue = true
+      unless hash.find { |e| e[1] == key.to_s } # just to do something
+        hash[key] = key.to_s
+        Thread.pass until t1_continue
+      end
+    end
+    sync_hash = SynchronizedDelegator.new(hash)
+    sync_hash[1] = 'egy'
 
     t1 = Thread.new do
-      sync_ary << 1
-      sync_ary.each do
+      sync_hash[2] = 'dva'
+      sync_hash[3] # triggers t2_continue
+    end
+
+    t2 = Thread.new do
+      Thread.pass until t2_continue
+      sync_hash[4] = '42'
+    end
+
+    sleep(0.05) # sleep some to allow threads to boot up
+
+    until t2.status == 'sleep' do
+      Thread.pass
+    end
+
+    assert_equal 3, hash.keys.size
+
+    t1_continue = true
+    t1.join; t2.join
+
+    assert_equal 4, sync_hash.size
+  end
+
+  def test_synchronizes_access_with_block
+    t1_continue, t2_continue = false, false
+
+    sync_array = SynchronizedDelegator.new(array = [])
+
+    t1 = Thread.new do
+      sync_array << 1
+      sync_array.each do
         t2_continue = true
         Thread.pass until t1_continue
       end
     end
 
     t2 = Thread.new do
+      # sleep(0.01)
       Thread.pass until t2_continue
-      sync_ary << 2
+      sync_array << 2
     end
 
-    Thread.pass until t2.status == 'sleep'
-    assert_equal 1, ary.size
+    until t2.status == 'sleep' || t2.status == false do
+      Thread.pass
+    end
+
+    assert_equal 1, array.size
 
     t1_continue = true
-    t1.join
-    t2.join
+    t1.join; t2.join
 
-    assert_equal 2, sync_ary.size
-  end
+    assert_equal [1, 2], array
+  end if RUBY_VERSION !~ /1\.8/
+
 end
