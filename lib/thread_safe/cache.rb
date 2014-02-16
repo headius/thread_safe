@@ -95,6 +95,12 @@ module ThreadSafe
       each_pair {|k, v| yield v}
     end unless method_defined?(:each_value)
 
+    def key(value)
+      each_pair {|k, v| return k if v == value}
+      nil
+    end unless method_defined?(:key)
+    alias_method :index, :key if RUBY_VERSION < '1.9'
+
     def empty?
       each_pair {|k, v| return false}
       true
