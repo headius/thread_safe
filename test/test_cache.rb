@@ -372,13 +372,23 @@ class TestCache < Test::Unit::TestCase
 
   def test_key
     with_or_without_default_proc do
+      assert_equal nil, @cache.key(1)
+      @cache[:a] = 1
+      assert_equal :a,  @cache.key(1)
+      assert_equal nil,  @cache.key(0)
+      assert_equal :a,  @cache.index(1) if RUBY_VERSION =~ /1\.8/
+    end
+  end
+
+  def test_key?
+    with_or_without_default_proc do
       assert_equal false, @cache.key?(:a)
       @cache[:a] = 1
       assert_equal true,  @cache.key?(:a)
     end
   end
 
-  def test_value
+  def test_value?
     with_or_without_default_proc do
       assert_equal false, @cache.value?(1)
       @cache[:a] = 1

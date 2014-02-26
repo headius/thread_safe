@@ -19,3 +19,4 @@ test/version_tmp
 tmp
 .DS_Store
 *.swp
+test/package.jar
