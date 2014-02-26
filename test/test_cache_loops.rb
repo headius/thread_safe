@@ -165,7 +165,7 @@ class TestCacheTorture < Test::Unit::TestCase
         cache.compute_if_absent(key)  { acc += 1; 1 }
       end
     RUBY_EVAL
-    do_thread_loop(:compute_if_absent_and_present, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       stored_sum       = 0
       stored_key_count = 0
       keys.each do |k|
@@ -188,7 +188,7 @@ class TestCacheTorture < Test::Unit::TestCase
         acc -= 1 if cache.delete_pair(key, key)
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
@@ -207,7 +207,7 @@ class TestCacheTorture < Test::Unit::TestCase
         end
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove_via_compute, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
@@ -222,7 +222,7 @@ class TestCacheTorture < Test::Unit::TestCase
         cache.compute_if_present(key) { acc -= 1; nil }
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove_via_compute_if_absent_present, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
@@ -237,7 +237,7 @@ class TestCacheTorture < Test::Unit::TestCase
         acc -= 1 if cache.delete(key)
       end
     RUBY_EVAL
-    do_thread_loop(:add_remove, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5, :prelude => prelude}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
@@ -248,7 +248,7 @@ class TestCacheTorture < Test::Unit::TestCase
       v = cache[key]
       acc += 1 if cache.replace_pair(key, v, v + 1)
     RUBY_EVAL
-    do_thread_loop(:count_up, code, {:loop_count => 5, :cache_setup => ZERO_VALUE_CACHE_SETUP}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5, :cache_setup => ZERO_VALUE_CACHE_SETUP}.merge(opts)) do |result, cache, options, keys|
       assert_count_up(result, cache, options, keys)
     end
   end
@@ -325,7 +325,6 @@ class TestCacheTorture < Test::Unit::TestCase
   def run_thread_loop(meth, keys, options)
     cache   = options[:cache_setup].call(options, keys)
     barrier = ThreadSafe::Test::Barrier.new(options[:thread_count])
-    t       = Time.now
     result = (1..options[:thread_count]).map do
       Thread.new do
         setup_sync_and_start_loop(meth, cache, keys, barrier, options[:loop_count])

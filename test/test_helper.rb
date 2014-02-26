@@ -2,7 +2,7 @@ require 'thread'
 
 if defined?(JRUBY_VERSION) && ENV['TEST_NO_UNSAFE']
   # to be used like this: rake test TEST_NO_UNSAFE=true
-  require 'test/package.jar'
+  load 'test/package.jar'
   java_import 'thread_safe.SecurityManager'
   manager = SecurityManager.new
 
