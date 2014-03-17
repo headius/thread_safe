@@ -28,13 +28,21 @@ sh = ThreadSafe::Hash.new # supports standard Hash.new forms
 ```
 
 `ThreadSafe::Cache` also exists, as a hash-like object, and should have
-much better performance characteristics under concurrency than
+much better performance characteristics esp. under high concurrency than
 `ThreadSafe::Hash`. However, `ThreadSafe::Cache` is not strictly semantically
-equivalent to ruby Hash -- for instance, it does not neccesarily ordered by
-insertion time as Hash is. For most uses it should do fine though, and we
-recommend you consider `ThreadSafe::Cache` instead of `ThreadSafe::Hash` for your
-concurrency-safe hash needs. 
+equivalent to a ruby `Hash` -- for instance, it does not necessarily retain
+ordering by insertion time as `Hash` does. For most uses it should do fine
+though, and we recommend you consider `ThreadSafe::Cache` instead of
+`ThreadSafe::Hash` for your concurrency-safe hash needs. It understands some
+options when created (depending on your ruby platform) that control some of the
+internals - when unsure just leave them out:
 
+
+```ruby
+require 'thread_safe'
+
+cache = ThreadSafe::Cache.new
+```
 
 ## Contributing
 
