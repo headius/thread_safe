@@ -16,7 +16,7 @@ Gem::Specification.new do |gem|
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
   gem.name          = "thread_safe"
   gem.require_paths = ["lib"]
-  gem.version       = Threadsafe::VERSION
+  gem.version       = ThreadSafe::VERSION
   gem.license       = "Apache-2.0"
 
   gem.add_dependency 'atomic', ['>= 1.1.7', '< 2']
