@@ -38,18 +38,18 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
       cache[key]
       cache.delete(key)
     RUBY_EVAL
-    do_thread_loop(:concurrency, code)
+    do_thread_loop(__method__, code)
   end
 
   def test_put_if_absent
-    do_thread_loop(:put_if_absent, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options, keys|
+    do_thread_loop(__method__, 'acc += 1 unless cache.put_if_absent(key, key)', :key_count => 100_000) do |result, cache, options, keys|
       assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
 
   def test_compute_if_absent
     code = 'cache.compute_if_absent(key) { acc += 1; key }'
-    do_thread_loop(:compute_if_absent, code) do |result, cache, options, keys|
+    do_thread_loop(__method__, code) do |result, cache, options, keys|
       assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
@@ -62,7 +62,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
         acc += 1 unless cache.put_if_absent(key, key)
       end
     RUBY_EVAL
-    do_thread_loop(:compute_put_if_absent, code) do |result, cache, options, keys|
+    do_thread_loop(__method__, code) do |result, cache, options, keys|
       assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
@@ -133,7 +133,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
       v = cache[key]
       acc += change if cache.replace_pair(key, v, v + change)
     RUBY_EVAL
-    do_thread_loop(:count_race, code, :loop_count => 5, :prelude => prelude, :cache_setup => ZERO_VALUE_CACHE_SETUP) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, :loop_count => 5, :prelude => prelude, :cache_setup => ZERO_VALUE_CACHE_SETUP) do |result, cache, options, keys|
       result_sum = sum(result)
       assert_equal(sum(keys.map {|key| cache[key]}), result_sum)
       assert_equal(sum(cache.values), result_sum)
@@ -143,14 +143,14 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
 
   def test_get_and_set_new
     code = 'acc += 1 unless cache.get_and_set(key, key)'
-    do_thread_loop(:get_and_set_new, code) do |result, cache, options, keys|
+    do_thread_loop(__method__, code) do |result, cache, options, keys|
       assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
 
   def test_get_and_set_existing
     code = 'acc += 1 if cache.get_and_set(key, key) == -1'
-    do_thread_loop(:get_and_set_existing, code, :cache_setup => INITIAL_VALUE_CACHE_SETUP, :initial_value => -1) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, :cache_setup => INITIAL_VALUE_CACHE_SETUP, :initial_value => -1) do |result, cache, options, keys|
       assert_standard_accumulator_test_result(result, cache, options, keys)
     end
   end
@@ -260,7 +260,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
         old_value ? old_value + 1 : 1
       end
     RUBY_EVAL
-    do_thread_loop(:count_up_via_compute, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
       assert_count_up(result, cache, options, keys)
       result.inject(nil) do |previous_value, next_value| # since compute guarantees atomicity all count ups should be equal
         assert_equal previous_value, next_value if previous_value
@@ -273,7 +273,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
     code = <<-RUBY_EVAL
       cache.merge_pair(key, 1) {|old_value| old_value + 1}
     RUBY_EVAL
-    do_thread_loop(:count_up_via_merge_pair, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
       all_match      = true
       expected_value = options[:loop_count] * options[:thread_count]
       keys.each do |key|
@@ -291,7 +291,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
       acc += 1 unless cache.put_if_absent(key, key)
       acc -= 1 if cache.delete_pair(key, key)
     RUBY_EVAL
-    do_thread_loop(:add_remove_to_zero, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
@@ -301,7 +301,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
     code = <<-RUBY_EVAL
       acc += (cache.merge_pair(key, key) {}) ? 1 : -1
     RUBY_EVAL
-    do_thread_loop(:add_remove_to_zero_via_merge_pair, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
+    do_thread_loop(__method__, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
       assert_equal(cache.size, sum(result))
     end
