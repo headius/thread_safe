@@ -2,14 +2,6 @@ require 'test/unit'
 require 'thread_safe/synchronized_delegator.rb'
 
 class TestSynchronizedDelegator < Test::Unit::TestCase
-  def setup
-    @old_abort = Thread.abort_on_exception
-    Thread.abort_on_exception = true
-  end
-
-  def teardown
-    Thread.abort_on_exception = @old_abort
-  end
 
   def test_wraps_array
     sync_array = SynchronizedDelegator.new(array = [])
