@@ -16,6 +16,14 @@ require 'monitor'
 # This class is currently being considered for inclusion into stdlib, via
 # https://bugs.ruby-lang.org/issues/8556
 class SynchronizedDelegator < SimpleDelegator
+  def setup
+    @old_abort = Thread.abort_on_exception
+    Thread.abort_on_exception = true
+  end
+
+  def teardown
+    Thread.abort_on_exception = @old_abort
+  end
 
   def initialize(obj)
     __setobj__(obj)
