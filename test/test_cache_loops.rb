@@ -299,7 +299,7 @@ class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERS
 
   def add_remove_to_zero_via_merge_pair(opts = {})
     code = <<-RUBY_EVAL
-      acc += (cache.merge_pair(key, key) {}) ? -1 : 1
+      acc += (cache.merge_pair(key, key) {}) ? 1 : -1
     RUBY_EVAL
     do_thread_loop(:add_remove_to_zero_via_merge_pair, code, {:loop_count => 5}.merge(opts)) do |result, cache, options, keys|
       assert_all_key_mappings_exist(cache, keys, false)
