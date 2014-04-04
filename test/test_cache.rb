@@ -1,11 +1,10 @@
-require 'test/unit'
 require 'thread_safe'
 require 'thread'
 require File.join(File.dirname(__FILE__), "test_helper")
 
 Thread.abort_on_exception = true
 
-class TestCache < Test::Unit::TestCase
+class TestCache < Minitest::Test
   def setup
     @cache = ThreadSafe::Cache.new
   end
@@ -470,7 +469,7 @@ class TestCache < Test::Unit::TestCase
         assert_equal(1, (@cache.fetch(:a) {flunk}))
       end
 
-      assert_raise(ThreadSafe::Cache::KEY_ERROR) do
+      assert_raises(ThreadSafe::Cache::KEY_ERROR) do
         @cache.fetch(:b)
       end
     end
@@ -704,7 +703,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_is_unfreezable
-    assert_raise(NoMethodError) { @cache.freeze }
+    assert_raises(NoMethodError) { @cache.freeze }
   end
 
   def test_marshal_dump_load
@@ -719,7 +718,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_marshal_dump_doesnt_work_with_default_proc
-    assert_raise(TypeError) do
+    assert_raises(TypeError) do
       Marshal.dump(ThreadSafe::Cache.new {})
     end
   end
@@ -748,7 +747,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def assert_invalid_options(options)
-    assert_raise(ArgumentError) { ThreadSafe::Cache.new(options) }
+    assert_raises(ArgumentError) { ThreadSafe::Cache.new(options) }
   end
 
   def assert_size_change(change, cache = @cache)
@@ -782,7 +781,7 @@ class TestCache < Test::Unit::TestCase
     before_had_value = before_had_key ? @cache[key] : nil
 
     assert_no_size_change do
-      assert_raise(TestException) do
+      assert_raises(TestException) do
         @cache.send(method, key, *args) { raise TestException, '' }
       end
       assert_equal before_had_key,   @cache.key?(key)

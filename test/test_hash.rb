@@ -1,7 +1,7 @@
-require 'test/unit'
 require 'thread_safe'
+require File.join(File.dirname(__FILE__), "test_helper")
 
-class TestHash < Test::Unit::TestCase
+class TestHash < Minitest::Test
   def test_concurrency
     hsh = ThreadSafe::Hash.new
     assert_nothing_raised do

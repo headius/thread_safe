@@ -21,4 +21,5 @@ Gem::Specification.new do |gem|
 
   gem.add_development_dependency 'atomic', ['>= 1.1.7', '< 2']
   gem.add_development_dependency 'rake'
+  gem.add_development_dependency 'minitest'
 end

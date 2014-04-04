@@ -1,11 +1,10 @@
 require 'thread'
-require 'test/unit'
 require 'thread_safe'
 require File.join(File.dirname(__FILE__), "test_helper")
 
 Thread.abort_on_exception = true
 
-class TestCacheTorture < Test::Unit::TestCase # this is not run unless RUBY_VERSION =~ /1\.8/ || ENV['TRAVIS'] (see the end of the file)
+class TestCacheTorture < Minitest::Test # this is not run unless RUBY_VERSION =~ /1\.8/ || ENV['TRAVIS'] (see the end of the file)
   THREAD_COUNT  = 40
   KEY_COUNT     = (((2**13) - 2) * 0.75).to_i # get close to the doubling cliff
   LOW_KEY_COUNT = (((2**8 ) - 2) * 0.75).to_i # get close to the doubling cliff

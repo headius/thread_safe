@@ -1,4 +1,22 @@
 require 'thread'
+require 'minitest/autorun'
+
+if Minitest.const_defined?('Test')
+  # We're on Minitest 5+. Nothing to do here.
+else
+  # Minitest 4 doesn't have Minitest::Test yet.
+  Minitest::Test = MiniTest::Unit::TestCase
+end
+
+# Minitest does not support assert_nothing_raised.
+# Eventually we should remove our use of this assert_nothing_raised function
+# for more specific asserts. In the mean time, add a backwards-compatible
+# implementation of assert_nothing_raised.
+class MiniTest::Test
+  def assert_nothing_raised(&block)
+    block.call
+  end
+end
 
 if defined?(JRUBY_VERSION) && ENV['TEST_NO_UNSAFE']
   # to be used like this: rake test TEST_NO_UNSAFE=true
@@ -10,7 +28,7 @@ if defined?(JRUBY_VERSION) && ENV['TEST_NO_UNSAFE']
   manager.deny java.lang.RuntimePermission.new("accessClassInPackage.sun.misc")
   java.lang.System.setSecurityManager manager
 
-  class TestNoUnsafe < Test::Unit::TestCase
+  class TestNoUnsafe < Minitest::Test
     def test_security_manager_is_used
       begin
         java_import 'sun.misc.Unsafe'
