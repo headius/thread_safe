@@ -11,18 +11,16 @@ class TestCache < Minitest::Test
 
   def test_concurrency
     cache = @cache
-    assert_nothing_raised do
-      (1..100).map do |i|
-        Thread.new do
-          1000.times do |j|
-            key = i*1000+j
-            cache[key] = i
-            cache[key]
-            cache.delete(key)
-          end
+    (1..100).map do |i|
+      Thread.new do
+        1000.times do |j|
+          key = i*1000+j
+          cache[key] = i
+          cache[key]
+          cache.delete(key)
         end
-      end.map(&:join)
-    end
+      end
+    end.map(&:join)
   end
 
   def test_retrieval
@@ -553,11 +551,9 @@ class TestCache < Minitest::Test
     @cache[:b] = 1
     @cache[:c] = 1
 
-    assert_nothing_raised do
-      assert_size_change 1 do
-        @cache.each_pair do |k, v|
-          @cache[:z] = 1
-        end
+    assert_size_change 1 do
+      @cache.each_pair do |k, v|
+        @cache[:z] = 1
       end
     end
   end
@@ -707,10 +703,9 @@ class TestCache < Minitest::Test
   end
 
   def test_marshal_dump_load
-    assert_nothing_raised do
-      new_cache = Marshal.load(Marshal.dump(@cache))
-      assert_equal 0, new_cache.size
-    end
+    new_cache = Marshal.load(Marshal.dump(@cache))
+    assert_instance_of ThreadSafe::Cache, new_cache
+    assert_equal 0, new_cache.size
     @cache[:a] = 1
     new_cache = Marshal.load(Marshal.dump(@cache))
     assert_equal 1, @cache[:a]
@@ -739,7 +734,8 @@ class TestCache < Minitest::Test
   end
 
   def assert_valid_options(options)
-    assert_nothing_raised { ThreadSafe::Cache.new(options) }
+    c = ThreadSafe::Cache.new(options)
+    assert_instance_of ThreadSafe::Cache, c
   end
 
   def assert_invalid_option(option_name, value)

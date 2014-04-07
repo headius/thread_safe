@@ -8,16 +8,6 @@ else
   Minitest::Test = MiniTest::Unit::TestCase
 end
 
-# Minitest does not support assert_nothing_raised.
-# Eventually we should remove our use of this assert_nothing_raised function
-# for more specific asserts. In the mean time, add a backwards-compatible
-# implementation of assert_nothing_raised.
-class MiniTest::Test
-  def assert_nothing_raised(&block)
-    block.call
-  end
-end
-
 if defined?(JRUBY_VERSION) && ENV['TEST_NO_UNSAFE']
   # to be used like this: rake test TEST_NO_UNSAFE=true
   load 'test/package.jar'
