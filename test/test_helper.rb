@@ -1,4 +1,5 @@
 require 'thread'
+require 'rubygems'
 require 'minitest/autorun'
 
 if Minitest.const_defined?('Test')
