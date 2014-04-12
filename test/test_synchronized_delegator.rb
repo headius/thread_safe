@@ -1,7 +1,7 @@
-require 'test/unit'
 require 'thread_safe/synchronized_delegator.rb'
+require File.join(File.dirname(__FILE__), "test_helper")
 
-class TestSynchronizedDelegator < Test::Unit::TestCase
+class TestSynchronizedDelegator < Minitest::Test
 
   def test_wraps_array
     sync_array = SynchronizedDelegator.new(array = [])

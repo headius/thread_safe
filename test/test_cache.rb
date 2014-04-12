@@ -1,29 +1,26 @@
-require 'test/unit'
 require 'thread_safe'
 require 'thread'
 require File.join(File.dirname(__FILE__), "test_helper")
 
 Thread.abort_on_exception = true
 
-class TestCache < Test::Unit::TestCase
+class TestCache < Minitest::Test
   def setup
     @cache = ThreadSafe::Cache.new
   end
 
   def test_concurrency
     cache = @cache
-    assert_nothing_raised do
-      (1..100).map do |i|
-        Thread.new do
-          1000.times do |j|
-            key = i*1000+j
-            cache[key] = i
-            cache[key]
-            cache.delete(key)
-          end
+    (1..100).map do |i|
+      Thread.new do
+        1000.times do |j|
+          key = i*1000+j
+          cache[key] = i
+          cache[key]
+          cache.delete(key)
         end
-      end.map(&:join)
-    end
+      end
+    end.map(&:join)
   end
 
   def test_retrieval
@@ -470,7 +467,7 @@ class TestCache < Test::Unit::TestCase
         assert_equal(1, (@cache.fetch(:a) {flunk}))
       end
 
-      assert_raise(ThreadSafe::Cache::KEY_ERROR) do
+      assert_raises(ThreadSafe::Cache::KEY_ERROR) do
         @cache.fetch(:b)
       end
     end
@@ -554,11 +551,9 @@ class TestCache < Test::Unit::TestCase
     @cache[:b] = 1
     @cache[:c] = 1
 
-    assert_nothing_raised do
-      assert_size_change 1 do
-        @cache.each_pair do |k, v|
-          @cache[:z] = 1
-        end
+    assert_size_change 1 do
+      @cache.each_pair do |k, v|
+        @cache[:z] = 1
       end
     end
   end
@@ -704,14 +699,13 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_is_unfreezable
-    assert_raise(NoMethodError) { @cache.freeze }
+    assert_raises(NoMethodError) { @cache.freeze }
   end
 
   def test_marshal_dump_load
-    assert_nothing_raised do
-      new_cache = Marshal.load(Marshal.dump(@cache))
-      assert_equal 0, new_cache.size
-    end
+    new_cache = Marshal.load(Marshal.dump(@cache))
+    assert_instance_of ThreadSafe::Cache, new_cache
+    assert_equal 0, new_cache.size
     @cache[:a] = 1
     new_cache = Marshal.load(Marshal.dump(@cache))
     assert_equal 1, @cache[:a]
@@ -719,7 +713,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def test_marshal_dump_doesnt_work_with_default_proc
-    assert_raise(TypeError) do
+    assert_raises(TypeError) do
       Marshal.dump(ThreadSafe::Cache.new {})
     end
   end
@@ -740,7 +734,8 @@ class TestCache < Test::Unit::TestCase
   end
 
   def assert_valid_options(options)
-    assert_nothing_raised { ThreadSafe::Cache.new(options) }
+    c = ThreadSafe::Cache.new(options)
+    assert_instance_of ThreadSafe::Cache, c
   end
 
   def assert_invalid_option(option_name, value)
@@ -748,7 +743,7 @@ class TestCache < Test::Unit::TestCase
   end
 
   def assert_invalid_options(options)
-    assert_raise(ArgumentError) { ThreadSafe::Cache.new(options) }
+    assert_raises(ArgumentError) { ThreadSafe::Cache.new(options) }
   end
 
   def assert_size_change(change, cache = @cache)
@@ -782,7 +777,7 @@ class TestCache < Test::Unit::TestCase
     before_had_value = before_had_key ? @cache[key] : nil
 
     assert_no_size_change do
-      assert_raise(TestException) do
+      assert_raises(TestException) do
         @cache.send(method, key, *args) { raise TestException, '' }
       end
       assert_equal before_had_key,   @cache.key?(key)
