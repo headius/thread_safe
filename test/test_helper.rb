@@ -1,5 +1,6 @@
 require 'thread'
 require 'rubygems'
+gem 'minitest', '>= 4'
 require 'minitest/autorun'
 
 if Minitest.const_defined?('Test')
