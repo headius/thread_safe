@@ -470,6 +470,11 @@ class TestCache < Minitest::Test
       assert_raises(ThreadSafe::Cache::KEY_ERROR) do
         @cache.fetch(:b)
       end
+
+      assert_no_size_change do
+        assert_equal 1,     (@cache.fetch(:b, :c) {1}) # assert block supersedes default value argument
+        assert_equal false,  @cache.key?(:b)
+      end
     end
   end
 
@@ -496,6 +501,86 @@ class TestCache < Minitest::Test
     with_or_without_default_proc do
       r = lambda do
         @cache.fetch(:a) { return 10 }
+      end.call
+
+      assert_no_size_change do
+        assert_equal 10,    r
+        assert_equal false, @cache.key?(:a)
+      end
+    end
+  end
+
+  def test_fetch_or_store
+    with_or_without_default_proc do |default_proc_set|
+      assert_size_change 1 do
+        assert_equal 1, @cache.fetch_or_store(:a, 1)
+        assert_equal 1, @cache[:a]
+      end
+
+      @cache.delete(:a)
+
+      assert_size_change 1 do
+        assert_equal 1, (@cache.fetch_or_store(:a) {1})
+        assert_equal 1,  @cache[:a]
+      end
+
+      assert_no_size_change do
+        assert_equal(1, (@cache.fetch_or_store(:a) {flunk}))
+      end
+
+      assert_raises(ThreadSafe::Cache::KEY_ERROR) do
+        @cache.fetch_or_store(:b)
+      end
+
+      assert_size_change 1 do
+        assert_equal 1, (@cache.fetch_or_store(:b, :c) {1}) # assert block supersedes default value argument
+        assert_equal 1,  @cache[:b]
+      end
+    end
+  end
+
+  def test_falsy_fetch_or_store
+    with_or_without_default_proc do
+      assert_equal false, @cache.key?(:a)
+
+      assert_size_change 1 do
+        assert_equal(nil,  @cache.fetch_or_store(:a, nil))
+        assert_equal nil,  @cache[:a]
+        assert_equal true, @cache.key?(:a)
+      end
+      @cache.delete(:a)
+
+      assert_size_change 1 do
+        assert_equal(false, @cache.fetch_or_store(:a, false))
+        assert_equal false, @cache[:a]
+        assert_equal true,  @cache.key?(:a)
+      end
+      @cache.delete(:a)
+
+      assert_size_change 1 do
+        assert_equal(nil, (@cache.fetch_or_store(:a) {}))
+        assert_equal nil,  @cache[:a]
+        assert_equal true, @cache.key?(:a)
+      end
+      @cache.delete(:a)
+
+      assert_size_change 1 do
+        assert_equal(false, (@cache.fetch_or_store(:a) {false}))
+        assert_equal false,  @cache[:a]
+        assert_equal true,   @cache.key?(:a)
+      end
+
+      @cache[:a] = nil
+      assert_no_size_change do
+        assert_equal(nil, (@cache.fetch_or_store(:a) {flunk}))
+      end
+    end
+  end
+
+  def test_fetch_or_store_with_return
+    with_or_without_default_proc do
+      r = lambda do
+        @cache.fetch_or_store(:a) { return 10 }
       end.call
 
       assert_no_size_change do

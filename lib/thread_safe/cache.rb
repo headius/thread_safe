@@ -59,7 +59,13 @@ module ThreadSafe
       elsif NULL != default_value
         default_value
       else
-        raise KEY_ERROR, 'key not found'
+        raise_fetch_no_key
+      end
+    end
+
+    def fetch_or_store(key, default_value = NULL)
+      fetch(key) do
+        put(key, block_given? ? yield(key) : (NULL == default_value ? raise_fetch_no_key : default_value))
       end
     end
 
@@ -131,6 +137,10 @@ module ThreadSafe
     undef :freeze
 
     private
+    def raise_fetch_no_key
+      raise KEY_ERROR, 'key not found'
+    end
+
     def initialize_copy(other)
       super
       populate_from(other)
