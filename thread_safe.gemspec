@@ -11,6 +11,7 @@ Gem::Specification.new do |gem|
 
   gem.files         = `git ls-files`.split($\)
   gem.files        += ['lib/thread_safe/jruby_cache_backend.jar'] if defined?(JRUBY_VERSION)
+  gem.files        -= ['.gitignore'] # see https://github.com/headius/thread_safe/issues/40#issuecomment-42315441
   gem.platform      = 'java' if defined?(JRUBY_VERSION)
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
