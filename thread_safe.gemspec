@@ -5,8 +5,8 @@ require 'thread_safe/version'
 Gem::Specification.new do |gem|
   gem.authors       = ["Charles Oliver Nutter", "thedarkone"]
   gem.email         = ["headius@headius.com", "thedarkone2@gmail.com"]
-  gem.description   = %q{Thread-safe collections and utilities for Ruby}
-  gem.summary       = %q{A collection of data structures and utilities to make thread-safe programming in Ruby easier}
+  gem.summary       = %q{Thread-safe collections and utilities for Ruby}
+  gem.description   = %q{A collection of data structures and utilities to make thread-safe programming in Ruby easier}
   gem.homepage      = "https://github.com/headius/thread_safe"
 
   gem.files         = `git ls-files`.split($\)
